@@ -29,12 +29,12 @@ const FIELD_DEPTH = 1.143;
 const WALL_HEIGHT = 0.08; // ~80mm border walls
 const WALL_THICKNESS = 0.02;
 
-// Robot dimensions (approximate SPIKE Prime base)
-const ROBOT_WIDTH = 0.16;  // 160mm
-const ROBOT_LENGTH = 0.18; // 180mm
-const ROBOT_HEIGHT = 0.10; // 100mm
-const WHEEL_RADIUS = 0.028; // 28mm
-const WHEEL_WIDTH = 0.02;
+// Robot dimensions (realistic SPIKE Prime compact driving base)
+const ROBOT_WIDTH = 0.12;  // 120mm — typical compact FLL base
+const ROBOT_LENGTH = 0.15; // 150mm
+const ROBOT_HEIGHT = 0.08; // 80mm
+const WHEEL_RADIUS = 0.028; // 28mm (56mm diameter — SPIKE Prime large wheel)
+const WHEEL_WIDTH = 0.018;
 const AXLE_HALF_WIDTH = ROBOT_WIDTH / 2;
 
 // Robot physics
@@ -512,7 +512,7 @@ function createRobot(
   // Front direction indicator (small cyan arrow/triangle)
   const frontIndicator = MeshBuilder.CreateCylinder(
     "frontIndicator",
-    { diameterTop: 0, diameterBottom: 0.03, height: 0.025, tessellation: 4 },
+    { diameterTop: 0, diameterBottom: 0.02, height: 0.018, tessellation: 4 },
     scene
   );
   const indicatorMat = new StandardMaterial("indicatorMat", scene);
@@ -538,7 +538,7 @@ function createRobot(
   ];
 
   snapPoints.forEach((sp) => {
-    const dot = MeshBuilder.CreateSphere(sp.name, { diameter: 0.012, segments: 6 }, scene);
+    const dot = MeshBuilder.CreateSphere(sp.name, { diameter: 0.008, segments: 6 }, scene);
     dot.material = snapMat;
     dot.parent = robotNode;
     dot.position = sp.pos;
