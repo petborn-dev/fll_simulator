@@ -1,14 +1,16 @@
 /**
- * FLL 3D Simulator — Phase 1: 3D Foundation
+ * FLL 3D Simulator — Phase 2: Robot on the Field
  * Design: Mission Control HUD — full-bleed 3D viewport with floating panels
  */
 
 import { useBabylonScene } from "@/hooks/useBabylonScene";
 import { HudPanel, DataReadout } from "@/components/HudPanel";
-import { RotateCcw, Box, Cpu, Zap } from "lucide-react";
+import { RotateCcw, Compass, Gauge, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Cpu, Zap, Box } from "lucide-react";
 
 export default function Home() {
   const { canvasRef, sceneState, resetScene } = useBabylonScene();
+
+  const isKeyActive = (key: string) => sceneState.keysPressed.has(key);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-background">
@@ -25,7 +27,7 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4">
             <div className="w-8 h-8 border-2 border-cyan-glow/30 border-t-cyan-glow rounded-full animate-spin" />
             <span className="data-readout text-sm text-cyan-glow/70 tracking-wider">
-              INITIALIZING PHYSICS ENGINE...
+              INITIALIZING SIMULATION...
             </span>
           </div>
         </div>
@@ -38,7 +40,7 @@ export default function Home() {
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               <span className="text-[10px] uppercase tracking-wider text-green-400/80">
-                Phase 1 — Foundation
+                Phase 2 — Robot on the Field
               </span>
             </div>
           </div>
@@ -60,36 +62,70 @@ export default function Home() {
         </HudPanel>
       </div>
 
-      {/* Bottom-left: Object Telemetry */}
+      {/* Bottom-left: Robot Telemetry */}
       <div className="absolute bottom-4 left-4 z-10">
-        <HudPanel title="Box Telemetry" className="relative min-w-[220px]">
-          <div className="flex flex-col gap-1">
-            <DataReadout
-              label="X"
-              value={sceneState.boxPosition.x}
-              unit="m"
-              color="cyan"
-            />
-            <DataReadout
-              label="Y"
-              value={sceneState.boxPosition.y}
-              unit="m"
-              color="amber"
-            />
-            <DataReadout
-              label="Z"
-              value={sceneState.boxPosition.z}
-              unit="m"
-              color="cyan"
-            />
+        <HudPanel title="Robot Telemetry" className="relative min-w-[240px]">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 mb-0.5">
+              <Compass className="w-3 h-3 text-cyan-glow/60" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Position</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <DataReadout
+                label="X"
+                value={sceneState.robot.position.x}
+                unit="m"
+                color="cyan"
+              />
+              <DataReadout
+                label="Y"
+                value={sceneState.robot.position.y}
+                unit="m"
+                color="amber"
+              />
+              <DataReadout
+                label="Z"
+                value={sceneState.robot.position.z}
+                unit="m"
+                color="cyan"
+              />
+            </div>
+            <div className="w-full h-px bg-cyan-glow/10 my-0.5" />
+            <div className="flex gap-4">
+              <DataReadout
+                label="HDG"
+                value={sceneState.robot.heading}
+                unit="°"
+                color="amber"
+              />
+              <DataReadout
+                label="SPD"
+                value={sceneState.robot.speed}
+                unit="m/s"
+                color="green"
+              />
+            </div>
           </div>
         </HudPanel>
       </div>
 
-      {/* Bottom-center: Controls */}
+      {/* Bottom-center: Controls & Key Indicators */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <HudPanel className="relative">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            {/* WASD Key Indicators */}
+            <div className="flex flex-col items-center gap-0.5">
+              <KeyIndicator label="W" icon={<ArrowUp className="w-2.5 h-2.5" />} active={isKeyActive("w") || isKeyActive("arrowup")} />
+              <div className="flex gap-0.5">
+                <KeyIndicator label="A" icon={<ArrowLeft className="w-2.5 h-2.5" />} active={isKeyActive("a") || isKeyActive("arrowleft")} />
+                <KeyIndicator label="S" icon={<ArrowDown className="w-2.5 h-2.5" />} active={isKeyActive("s") || isKeyActive("arrowdown")} />
+                <KeyIndicator label="D" icon={<ArrowRight className="w-2.5 h-2.5" />} active={isKeyActive("d") || isKeyActive("arrowright")} />
+              </div>
+            </div>
+
+            <div className="w-px h-10 bg-cyan-glow/20" />
+
+            {/* Reset Button */}
             <button
               onClick={resetScene}
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-cyan-glow/10 border border-cyan-glow/30 
@@ -99,9 +135,11 @@ export default function Home() {
               <RotateCcw className="w-3.5 h-3.5" />
               Reset
             </button>
-            <div className="w-px h-6 bg-cyan-glow/20" />
-            <span className="text-[10px] text-muted-foreground tracking-wider">
-              Scroll to zoom · Drag to orbit · Right-drag to pan
+
+            <div className="w-px h-10 bg-cyan-glow/20" />
+
+            <span className="text-[10px] text-muted-foreground tracking-wider max-w-[140px] leading-relaxed">
+              WASD to drive · Scroll to zoom · Drag to orbit
             </span>
           </div>
         </HudPanel>
@@ -123,9 +161,29 @@ export default function Home() {
               <Cpu className="w-3 h-3 text-green-400/60" />
               <span className="text-[10px] text-muted-foreground">WebGL 2.0</span>
             </div>
+            <div className="flex items-center gap-1.5">
+              <Gauge className="w-3 h-3 text-cyan-glow/60" />
+              <span className="text-[10px] text-muted-foreground">Differential Drive</span>
+            </div>
           </div>
         </HudPanel>
       </div>
+    </div>
+  );
+}
+
+/** Keyboard key indicator component */
+function KeyIndicator({ label, icon, active }: { label: string; icon: React.ReactNode; active: boolean }) {
+  return (
+    <div
+      className={`w-7 h-7 flex items-center justify-center rounded text-[10px] font-mono transition-all duration-100
+        ${active
+          ? "bg-cyan-glow/30 border border-cyan-glow text-cyan-glow shadow-[0_0_8px_rgba(0,200,255,0.3)]"
+          : "bg-hud-bg border border-hud-border text-muted-foreground"
+        }`}
+      title={label}
+    >
+      {icon}
     </div>
   );
 }
