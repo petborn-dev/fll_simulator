@@ -1,7 +1,8 @@
 /**
- * FLL 3D Simulator — Phase 3: Game Environment with Mission Models
- * Babylon.js + Rapier physics with FLL game mat, border walls,
- * differential-drive robot, keyboard controls, and camera follow.
+ * FLL 3D Simulator — Phase 3.5: Enhanced Game Environment
+ * Babylon.js + Rapier physics with official SUBMERGED field mat texture,
+ * border walls, differential-drive robot, keyboard controls, camera follow,
+ * and enhanced mission physics (hinge joints, flip/topple, trigger zones).
  *
  * MEMORY SAFETY:
  * - All Babylon objects created inside init() are disposed via scene.dispose()
@@ -26,6 +27,7 @@ import {
   ShadowGenerator,
   Quaternion,
   DynamicTexture,
+  Texture,
   TransformNode,
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
@@ -389,66 +391,23 @@ export function useBabylonScene() {
 // HELPER FUNCTIONS
 // ==========================================
 
+// CDN URL for the official SUBMERGED 2024-25 field mat texture
+const FIELD_MAT_TEXTURE_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663316655797/mCLtYWVwwnd2N8V3jdbdkB/submerged_field_mat_ae7117f2.jpg";
+
 function createFieldMaterial(scene: Scene): StandardMaterial {
-  const texSize = 1024;
-  const tex = new DynamicTexture("fieldTex", { width: texSize, height: Math.round(texSize * (FIELD_DEPTH / FIELD_WIDTH)) }, scene, false);
-  const ctx = tex.getContext() as unknown as CanvasRenderingContext2D;
-  const w = texSize;
-  const h = Math.round(texSize * (FIELD_DEPTH / FIELD_WIDTH));
-
-  // White base
-  ctx.fillStyle = "#f0f0f0";
-  ctx.fillRect(0, 0, w, h);
-
-  // Grid lines (light gray)
-  ctx.strokeStyle = "#d0d0d0";
-  ctx.lineWidth = 1;
-  const gridStep = w / 12;
-  for (let i = 0; i <= 12; i++) {
-    const x = i * gridStep;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-  }
-  const gridStepH = h / 6;
-  for (let i = 0; i <= 6; i++) {
-    const y = i * gridStepH;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
-
-  // Home area (bottom-left, blue rectangle)
-  const homeX = 0;
-  const homeY = h * 0.7;
-  const homeW = w * 0.25;
-  const homeH = h * 0.3;
-  ctx.fillStyle = "rgba(100, 160, 220, 0.3)";
-  ctx.fillRect(homeX, homeY, homeW, homeH);
-  ctx.strokeStyle = "#3388cc";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(homeX, homeY, homeW, homeH);
-
-  // HOME label
-  ctx.fillStyle = "#3388cc";
-  ctx.font = `bold ${Math.round(h * 0.06)}px sans-serif`;
-  ctx.textAlign = "center";
-  ctx.fillText("HOME", homeX + homeW / 2, homeY + homeH / 2 + h * 0.02);
-
-  // Diagonal lines (mission paths)
-  ctx.strokeStyle = "#888";
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(w * 0.3, h * 0.1); ctx.lineTo(w * 0.9, h * 0.85); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(w * 0.5, 0); ctx.lineTo(w, h * 0.7); ctx.stroke();
-
-  // Circle marker
-  ctx.strokeStyle = "#66aa66";
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(w * 0.75, h * 0.4, w * 0.08, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = "rgba(100, 180, 100, 0.15)";
-  ctx.fill();
-
-  tex.update();
-
   const mat = new StandardMaterial("fieldMat", scene);
+
+  // Load the official SUBMERGED field mat image as the texture
+  const tex = new Texture(FIELD_MAT_TEXTURE_URL, scene, false, true);
+  // The image is wider than tall (landscape), matching the field aspect ratio.
+  // Babylon.js ground UV: U maps along X (width), V maps along Z (depth).
+  // The image top = negative Z (back of field), bottom = positive Z (front/home side).
+  tex.uScale = 1;
+  tex.vScale = 1;
+
   mat.diffuseTexture = tex;
-  mat.specularColor = new Color3(0.15, 0.15, 0.15);
+  mat.specularColor = new Color3(0.08, 0.08, 0.08); // low specular for mat-like surface
+  mat.emissiveColor = new Color3(0.05, 0.05, 0.05); // slight emissive so mat is visible in shadows
   return mat;
 }
 

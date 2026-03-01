@@ -1,6 +1,7 @@
 /**
- * FLL 3D Simulator — Phase 3: Game Environment with Mission Models
+ * FLL 3D Simulator — Phase 3.5: Enhanced Game Environment
  * Design: Mission Control HUD — full-bleed 3D viewport with floating panels
+ * Features: Official SUBMERGED field mat texture, enhanced hinge/flip physics
  */
 
 import { useBabylonScene } from "@/hooks/useBabylonScene";
@@ -43,7 +44,7 @@ export default function Home() {
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               <span className="text-[10px] uppercase tracking-wider text-green-400/80">
-                Phase 3 — Game Environment
+                Phase 3.5 — Enhanced Environment
               </span>
             </div>
             <div className="flex items-center gap-1.5">

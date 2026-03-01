@@ -1,8 +1,15 @@
 /**
- * Mission Renderer — Builds 3D meshes and physics bodies from mission definitions
+ * Mission Renderer — Phase 3.5 Enhanced
  * 
+ * Builds 3D meshes and physics bodies from mission definitions.
  * Creates Babylon.js meshes and Rapier rigid bodies for each mission part,
  * handling static, dynamic, hinge, and trigger types.
+ * 
+ * Phase 3.5 enhancements:
+ * - Hinge anchor offsets for realistic pivot points (e.g., door hinges at edge)
+ * - Per-part angular damping for hinge bodies
+ * - Improved dynamic body parameters for better topple/flip physics
+ * - Lower linear damping on dynamic parts for more realistic sliding
  */
 import {
   Scene,
@@ -64,10 +71,6 @@ function renderMission(
 
   for (const part of mission.parts) {
     const rendered = renderPart(part, mission.position, scene, world, shadowGenerator);
-    if (rendered.mesh instanceof Mesh || rendered.mesh instanceof TransformNode) {
-      // Don't parent physics-driven meshes to the node (they follow physics)
-      // But we track them for cleanup
-    }
     renderedParts.push(rendered);
   }
 
@@ -148,10 +151,11 @@ function renderPart(
     }
 
     case "dynamic": {
+      // Dynamic bodies: lower damping for more realistic sliding/toppling
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(wx, wy, wz)
-        .setLinearDamping(2.0)
-        .setAngularDamping(2.0);
+        .setLinearDamping(1.0)   // reduced from 2.0 for more realistic sliding
+        .setAngularDamping(1.0); // reduced from 2.0 for more realistic toppling
       rigidBody = world.createRigidBody(bodyDesc);
       const colliderDesc = createColliderDesc(part);
       if (colliderDesc) {
@@ -164,11 +168,12 @@ function renderPart(
     }
 
     case "hinge": {
-      // Create a dynamic body that's constrained by a revolute joint
+      // Hinge bodies: use per-part damping if specified
+      const angDamping = part.hingeDamping ?? 1.5;
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(wx, wy, wz)
         .setLinearDamping(3.0)
-        .setAngularDamping(1.5);
+        .setAngularDamping(angDamping);
       rigidBody = world.createRigidBody(bodyDesc);
       const colliderDesc = createColliderDesc(part);
       if (colliderDesc) {
@@ -177,15 +182,22 @@ function renderPart(
         world.createCollider(colliderDesc, rigidBody);
       }
 
-      // Create a fixed anchor body at the same position
-      const anchorDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(wx, wy, wz);
+      // Create a fixed anchor body at the hinge pivot point
+      // If hingeAnchorOffset is specified, the anchor is at (part center + offset)
+      // and the joint connects from anchor to the dynamic body with the offset
+      const offset = part.hingeAnchorOffset ?? { x: 0, y: 0, z: 0 };
+      const anchorX = wx + offset.x;
+      const anchorY = wy + offset.y;
+      const anchorZ = wz + offset.z;
+
+      const anchorDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(anchorX, anchorY, anchorZ);
       const anchorBody = world.createRigidBody(anchorDesc);
 
       // Create revolute joint
       const axis = getHingeAxis(part.hingeAxis ?? "x");
       const jointData = RAPIER.JointData.revolute(
-        new RAPIER.Vector3(0, 0, 0), // anchor1 (on anchor body)
-        new RAPIER.Vector3(0, 0, 0), // anchor2 (on dynamic body)
+        new RAPIER.Vector3(0, 0, 0),       // anchor point on the fixed body (at its origin)
+        new RAPIER.Vector3(offset.x, offset.y, offset.z), // anchor point on the dynamic body (offset from its center)
         axis
       );
 
