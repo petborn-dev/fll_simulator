@@ -1,5 +1,5 @@
 /**
- * FLL 3D Simulator — Phase 2: Robot on the Field
+ * FLL 3D Simulator — Phase 3: Game Environment with Mission Models
  * Babylon.js + Rapier physics with FLL game mat, border walls,
  * differential-drive robot, keyboard controls, and camera follow.
  *
@@ -29,6 +29,8 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
+import { getSeasonMissions } from "@/lib/missions";
+import { renderMissions, syncMissionPhysics, type RenderedMission } from "@/lib/missionRenderer";
 
 // FLL field dimensions in meters (real: 2362mm x 1143mm)
 const FIELD_WIDTH = 2.362;
@@ -65,6 +67,8 @@ interface SceneState {
   robot: RobotState;
   isReady: boolean;
   keysPressed: Set<string>;
+  missionCount: number;
+  season: string;
 }
 
 // Pre-allocated temp vectors to avoid per-frame allocations
@@ -96,12 +100,16 @@ export function useBabylonScene() {
   const physicsStepRef = useRef(0);
   const disposedRef = useRef(false);
 
+  const missionsRef = useRef<RenderedMission[]>([]);
+
   const [sceneState, setSceneState] = useState<SceneState>({
     fps: 0,
     physicsStep: 0,
     robot: { position: { x: 0, y: 0, z: 0 }, heading: 0, speed: 0 },
     isReady: false,
     keysPressed: new Set(),
+    missionCount: 0,
+    season: "SUBMERGED 2024-25",
   });
 
   const resetScene = useCallback(() => {
@@ -240,6 +248,11 @@ export function useBabylonScene() {
         return;
       }
 
+      // === MISSION MODELS ===
+      const missionDefs = getSeasonMissions();
+      const renderedMissions = renderMissions(missionDefs, scene, world, shadowGenerator);
+      missionsRef.current = renderedMissions;
+
       // === KEYBOARD INPUT ===
       onKeyDown = (e: KeyboardEvent) => {
         const key = e.key.toLowerCase();
@@ -280,6 +293,9 @@ export function useBabylonScene() {
         _reuseQuat.set(rot.x, rot.y, rot.z, rot.w);
         robotNode.rotationQuaternion = _reuseQuat;
 
+        // Sync mission model meshes with physics
+        syncMissionPhysics(renderedMissions);
+
         // Camera follows robot (smooth lerp)
         camera.target.x += (pos.x - camera.target.x) * 0.08;
         camera.target.y += (0.15 - camera.target.y) * 0.08;
@@ -309,6 +325,8 @@ export function useBabylonScene() {
             },
             isReady: true,
             keysPressed: new Set(keysRef.current),
+            missionCount: renderedMissions.length,
+            season: "SUBMERGED 2024-25",
           });
         }
       });
@@ -355,6 +373,7 @@ export function useBabylonScene() {
 
       robotBodyRef.current = null;
       robotMeshRef.current = null;
+      missionsRef.current = [];
       keysRef.current.clear();
     }
 

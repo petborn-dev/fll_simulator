@@ -1,11 +1,14 @@
 /**
- * FLL 3D Simulator — Phase 2: Robot on the Field
+ * FLL 3D Simulator — Phase 3: Game Environment with Mission Models
  * Design: Mission Control HUD — full-bleed 3D viewport with floating panels
  */
 
 import { useBabylonScene } from "@/hooks/useBabylonScene";
 import { HudPanel, DataReadout } from "@/components/HudPanel";
-import { RotateCcw, Compass, Gauge, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Cpu, Zap, Box } from "lucide-react";
+import {
+  RotateCcw, Compass, Gauge, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
+  Cpu, Zap, Box, Anchor, Target
+} from "lucide-react";
 
 export default function Home() {
   const { canvasRef, sceneState, resetScene } = useBabylonScene();
@@ -33,14 +36,26 @@ export default function Home() {
         </div>
       )}
 
-      {/* Top-left: Title & Status */}
+      {/* Top-left: Title & Season */}
       <div className="absolute top-4 left-4 z-10">
         <HudPanel title="FLL 3D Simulator" className="relative">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               <span className="text-[10px] uppercase tracking-wider text-green-400/80">
-                Phase 2 — Robot on the Field
+                Phase 3 — Game Environment
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Anchor className="w-3 h-3 text-cyan-glow/60" />
+              <span className="text-[10px] uppercase tracking-wider text-cyan-glow/80">
+                {sceneState.season}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Target className="w-3 h-3 text-amber-score/60" />
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {sceneState.missionCount} missions loaded
               </span>
             </div>
           </div>
@@ -58,6 +73,37 @@ export default function Home() {
               unit="steps"
               color="amber"
             />
+          </div>
+        </HudPanel>
+      </div>
+
+      {/* Right side: Mission List */}
+      <div className="absolute top-[110px] right-4 z-10 max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
+        <HudPanel title="Missions" className="relative min-w-[160px]">
+          <div className="flex flex-col gap-1">
+            {[
+              { id: "M01", name: "Coral Nursery", pts: 50 },
+              { id: "M02", name: "Shark", pts: 30 },
+              { id: "M03", name: "Coral Reef", pts: 35 },
+              { id: "M05", name: "Angler Fish", pts: 30 },
+              { id: "M06", name: "Raise the Mast", pts: 30 },
+              { id: "M08", name: "Artificial Habitat", pts: 40 },
+              { id: "M11", name: "Sonar Discovery", pts: 30 },
+              { id: "M13", name: "Shipping Lanes", pts: 20 },
+            ].map((m) => (
+              <div key={m.id} className="flex items-center justify-between gap-2 py-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="data-readout text-[10px] text-cyan-glow/80 w-6">{m.id}</span>
+                  <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">{m.name}</span>
+                </div>
+                <span className="data-readout text-[10px] text-amber-score/70">{m.pts}pt</span>
+              </div>
+            ))}
+            <div className="w-full h-px bg-cyan-glow/10 my-0.5" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Total</span>
+              <span className="data-readout text-[11px] text-amber-score">265pt</span>
+            </div>
           </div>
         </HudPanel>
       </div>
