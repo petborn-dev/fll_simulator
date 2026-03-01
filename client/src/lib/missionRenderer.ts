@@ -21,10 +21,28 @@ import {
   ShadowGenerator,
   Mesh,
   Quaternion,
-  DynamicTexture,
 } from "@babylonjs/core";
+import { AdvancedDynamicTexture, TextBlock, Rectangle } from "@babylonjs/gui";
 import RAPIER from "@dimforge/rapier3d-compat";
 import type { MissionDefinition, MissionPart } from "./missions";
+
+// Shared fullscreen GUI texture for all mission labels (created once)
+let _guiTexture: AdvancedDynamicTexture | null = null;
+function getGuiTexture(scene: Scene): AdvancedDynamicTexture {
+  if (!_guiTexture) {
+    _guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("missionLabelsUI", true, scene);
+    _guiTexture.idealWidth = 1920;
+  }
+  return _guiTexture;
+}
+
+/** Dispose the shared GUI texture (call on scene reset) */
+export function disposeMissionLabelsGUI(): void {
+  if (_guiTexture) {
+    _guiTexture.dispose();
+    _guiTexture = null;
+  }
+}
 
 export interface RenderedMissionPart {
   id: string;
@@ -307,100 +325,44 @@ function getHingeAxis(axis: "x" | "y" | "z"): RAPIER.Vector3 {
 }
 
 /**
- * Create a floating label above a mission
+ * Create a floating label above a mission using Babylon GUI for pixel-perfect crisp text.
+ * Shows only the mission ID (e.g. "M01") to keep labels compact.
  */
 function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
-  const labelHeight = 0.28;
-  // High-resolution texture for crisp text on a compact label
-  const texW = 2048;
-  const texH = 512;
-  // Compact plane — readable but doesn't block models
-  const planeW = 0.22;
-  const planeH = 0.055;
+  const labelHeight = 0.25;
 
-  const plane = MeshBuilder.CreatePlane(`label_${mission.id}`, {
-    width: planeW,
-    height: planeH,
-  }, scene);
+  // Invisible anchor mesh positioned above the mission
+  const anchor = MeshBuilder.CreatePlane(`labelAnchor_${mission.id}`, { width: 0.01, height: 0.01 }, scene);
+  anchor.position.set(mission.position.x, labelHeight, mission.position.z);
+  anchor.isVisible = false;
 
-  const mat = new StandardMaterial(`labelMat_${mission.id}`, scene);
-  mat.diffuseColor = new Color3(0, 0, 0);
-  mat.emissiveColor = new Color3(1, 1, 1);
-  mat.alpha = 1.0;
-  mat.backFaceCulling = false;
-  mat.disableLighting = true;
-  plane.material = mat;
+  const gui = getGuiTexture(scene);
 
-  plane.position.set(mission.position.x, labelHeight, mission.position.z);
-  plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  // Container rectangle — dark pill background
+  const rect = new Rectangle(`labelRect_${mission.id}`);
+  rect.width = "68px";
+  rect.height = "28px";
+  rect.cornerRadius = 6;
+  rect.color = "#00e5ff";
+  rect.thickness = 1.5;
+  rect.background = "rgba(0, 8, 16, 0.92)";
+  rect.shadowColor = "rgba(0, 229, 255, 0.4)";
+  rect.shadowBlur = 6;
+  rect.linkOffsetY = -20;
+  gui.addControl(rect);
+  rect.linkWithMesh(anchor);
 
-  // Create ultra-high-res dynamic texture
-  const dynamicTexture = new DynamicTexture(
-    `labelTex_${mission.id}`,
-    { width: texW, height: texH },
-    scene,
-    true
-  );
-  dynamicTexture.hasAlpha = true;
-  const ctx = dynamicTexture.getContext() as CanvasRenderingContext2D;
-  ctx.clearRect(0, 0, texW, texH);
+  // Mission ID text — crisp, bold, bright cyan
+  const text = new TextBlock(`labelText_${mission.id}`, mission.id);
+  text.color = "#00ffff";
+  text.fontSize = 16;
+  text.fontWeight = "bold";
+  text.fontFamily = "'Courier New', monospace";
+  text.textHorizontalAlignment = TextBlock.HORIZONTAL_ALIGNMENT_CENTER;
+  text.textVerticalAlignment = TextBlock.VERTICAL_ALIGNMENT_CENTER;
+  rect.addControl(text);
 
-  // Draw rounded background pill — fully opaque dark background
-  const r = 60;
-  const pad = 24;
-  ctx.beginPath();
-  ctx.moveTo(pad + r, pad);
-  ctx.lineTo(texW - pad - r, pad);
-  ctx.quadraticCurveTo(texW - pad, pad, texW - pad, pad + r);
-  ctx.lineTo(texW - pad, texH - pad - r);
-  ctx.quadraticCurveTo(texW - pad, texH - pad, texW - pad - r, texH - pad);
-  ctx.lineTo(pad + r, texH - pad);
-  ctx.quadraticCurveTo(pad, texH - pad, pad, texH - pad - r);
-  ctx.lineTo(pad, pad + r);
-  ctx.quadraticCurveTo(pad, pad, pad + r, pad);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(0, 6, 12, 0.96)";
-  ctx.fill();
-  // Bright cyan border
-  ctx.strokeStyle = "rgba(0, 230, 255, 0.9)";
-  ctx.lineWidth = 8;
-  ctx.stroke();
-
-  // Draw mission ID — bold, bright cyan with glow
-  ctx.shadowColor = "#00e5ff";
-  ctx.shadowBlur = 10;
-  ctx.font = "bold 180px 'Courier New', monospace";
-  ctx.fillStyle = "#00ffff";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(mission.id, pad + 48, texH / 2);
-
-  // Draw mission name — bold, bright white with glow
-  const idWidth = ctx.measureText(mission.id).width;
-  ctx.shadowColor = "#ffffff";
-  ctx.shadowBlur = 6;
-  ctx.font = "bold 110px Arial, Helvetica, sans-serif";
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "left";
-  const nameX = pad + 48 + idWidth + 36;
-  const maxNameW = texW - nameX - pad - 48;
-  // Truncate name if too long
-  let displayName = mission.name;
-  while (ctx.measureText(displayName).width > maxNameW && displayName.length > 3) {
-    displayName = displayName.slice(0, -1);
-  }
-  if (displayName !== mission.name) displayName += "\u2026";
-  ctx.fillText(displayName, nameX, texH / 2 + 6);
-
-  // Reset shadow
-  ctx.shadowColor = "transparent";
-  ctx.shadowBlur = 0;
-
-  dynamicTexture.update();
-  mat.diffuseTexture = dynamicTexture;
-  mat.opacityTexture = dynamicTexture;
-
-  return plane;
+  return anchor as unknown as Mesh;
 }
 
 /**

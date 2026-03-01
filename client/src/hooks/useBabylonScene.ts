@@ -33,7 +33,7 @@ import {
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { getSeasonMissions } from "@/lib/missions";
-import { renderMissions, syncMissionPhysics, type RenderedMission } from "@/lib/missionRenderer";
+import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, type RenderedMission } from "@/lib/missionRenderer";
 import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
 
 // FLL field dimensions in meters (real: 2362mm x 1143mm)
@@ -389,6 +389,9 @@ export function useBabylonScene() {
       if (resizeHandler) window.removeEventListener("resize", resizeHandler);
       if (onKeyDown) window.removeEventListener("keydown", onKeyDown, true);
       if (onKeyUp) window.removeEventListener("keyup", onKeyUp, true);
+
+      // Dispose mission label GUI overlay
+      disposeMissionLabelsGUI();
 
       // Dispose Babylon scene (disposes all meshes, materials, textures)
       if (scene) {
