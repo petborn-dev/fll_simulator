@@ -24,7 +24,7 @@ import {
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, TextBlock, Rectangle } from "@babylonjs/gui";
 import RAPIER from "@dimforge/rapier3d-compat";
-import type { MissionDefinition, MissionPart } from "./missions";
+import type { MissionDefinition, MissionPart, CompoundChild } from "./missions";
 
 // Shared fullscreen GUI texture for all mission labels (created once)
 let _guiTexture: AdvancedDynamicTexture | null = null;
@@ -127,34 +127,44 @@ function renderPart(
     mesh.rotation.set(part.rotation.x, part.rotation.y, part.rotation.z);
   }
 
-  // Add shadow casting for non-trigger parts
-  if (shadowGenerator && part.type !== "trigger") {
-    shadowGenerator.addShadowCaster(mesh);
-  }
+  // Handle shadow casting and materials
+  const hasChildren = part.children && part.children.length > 0;
 
-  // Create material
-  const mat = new StandardMaterial(`mat_${part.id}`, scene);
-  mat.diffuseColor = new Color3(part.color.r, part.color.g, part.color.b);
-
-  if (part.type === "trigger") {
-    // Trigger zones are semi-transparent with pulsing glow
-    mat.alpha = 0.35;
-    mat.emissiveColor = new Color3(
-      part.color.r * 0.6,
-      part.color.g * 0.6,
-      part.color.b * 0.6
-    );
-    // Add wireframe overlay for better visibility
-    mat.wireframe = false;
+  if (hasChildren) {
+    // Compound part: children already have materials from createMesh
+    // Add shadow casting for each child mesh
+    if (shadowGenerator && part.type !== "trigger") {
+      for (const child of mesh.getChildMeshes()) {
+        shadowGenerator.addShadowCaster(child as Mesh);
+      }
+    }
   } else {
-    mat.specularColor = new Color3(0.15, 0.15, 0.15);
-    mat.emissiveColor = new Color3(
-      part.color.r * 0.05,
-      part.color.g * 0.05,
-      part.color.b * 0.05
-    );
+    // Simple part: apply material to the single mesh
+    if (shadowGenerator && part.type !== "trigger") {
+      shadowGenerator.addShadowCaster(mesh);
+    }
+
+    const mat = new StandardMaterial(`mat_${part.id}`, scene);
+    mat.diffuseColor = new Color3(part.color.r, part.color.g, part.color.b);
+
+    if (part.type === "trigger") {
+      mat.alpha = 0.35;
+      mat.emissiveColor = new Color3(
+        part.color.r * 0.6,
+        part.color.g * 0.6,
+        part.color.b * 0.6
+      );
+      mat.wireframe = false;
+    } else {
+      mat.specularColor = new Color3(0.15, 0.15, 0.15);
+      mat.emissiveColor = new Color3(
+        part.color.r * 0.05,
+        part.color.g * 0.05,
+        part.color.b * 0.05
+      );
+    }
+    mesh.material = mat;
   }
-  mesh.material = mat;
 
   // Create physics body
   let rigidBody: RAPIER.RigidBody | null = null;
@@ -267,37 +277,86 @@ function renderPart(
 }
 
 /**
- * Create a Babylon.js mesh from a part definition
+ * Create a simple shape mesh
  */
-function createMesh(part: MissionPart, scene: Scene): Mesh {
-  switch (part.shape) {
+function createSimpleShape(
+  name: string,
+  shape: "box" | "cylinder" | "sphere",
+  size: { x: number; y: number; z: number },
+  scene: Scene
+): Mesh {
+  switch (shape) {
     case "box":
-      return MeshBuilder.CreateBox(part.id, {
-        width: part.size.x,
-        height: part.size.y,
-        depth: part.size.z,
+      return MeshBuilder.CreateBox(name, {
+        width: size.x,
+        height: size.y,
+        depth: size.z,
       }, scene);
-
     case "cylinder":
-      return MeshBuilder.CreateCylinder(part.id, {
-        diameter: part.size.x * 2,
-        height: part.size.y,
+      return MeshBuilder.CreateCylinder(name, {
+        diameter: size.x * 2,
+        height: size.y,
         tessellation: 12,
       }, scene);
-
     case "sphere":
-      return MeshBuilder.CreateSphere(part.id, {
-        diameter: part.size.x * 2,
+      return MeshBuilder.CreateSphere(name, {
+        diameter: size.x * 2,
         segments: 10,
       }, scene);
-
     default:
-      return MeshBuilder.CreateBox(part.id, {
-        width: part.size.x,
-        height: part.size.y,
-        depth: part.size.z,
+      return MeshBuilder.CreateBox(name, {
+        width: size.x,
+        height: size.y,
+        depth: size.z,
       }, scene);
   }
+}
+
+/**
+ * Create a Babylon.js mesh from a part definition.
+ * If the part has compound children, creates a parent mesh with child sub-meshes.
+ * The parent mesh is used for physics (invisible if children exist).
+ */
+function createMesh(part: MissionPart, scene: Scene): Mesh {
+  // If no children, create a simple shape as before
+  if (!part.children || part.children.length === 0) {
+    return createSimpleShape(part.id, part.shape, part.size, scene);
+  }
+
+  // Compound part: create an invisible parent mesh for physics bounding
+  const parent = createSimpleShape(part.id, part.shape, part.size, scene);
+  parent.isVisible = false; // physics-only; children provide visuals
+
+  // Create each child as a visible sub-mesh parented to the parent
+  for (let i = 0; i < part.children.length; i++) {
+    const child = part.children[i];
+    const childMesh = createSimpleShape(
+      `${part.id}_child_${i}`,
+      child.shape,
+      child.size,
+      scene
+    );
+    childMesh.position.set(child.position.x, child.position.y, child.position.z);
+    if (child.rotation) {
+      childMesh.rotation.set(child.rotation.x, child.rotation.y, child.rotation.z);
+    }
+
+    // Each child gets its own colored material
+    const childMat = new StandardMaterial(`mat_${part.id}_child_${i}`, scene);
+    childMat.diffuseColor = new Color3(child.color.r, child.color.g, child.color.b);
+    childMat.specularColor = new Color3(0.15, 0.15, 0.15);
+    childMat.emissiveColor = new Color3(
+      child.color.r * 0.05,
+      child.color.g * 0.05,
+      child.color.b * 0.05
+    );
+    childMesh.material = childMat;
+
+    // Parent the child to the main mesh so it moves/rotates with physics
+    childMesh.parent = parent;
+  }
+
+  return parent;
 }
 
 /**

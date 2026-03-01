@@ -13,9 +13,22 @@
  *   Y: up, ground = 0
  *   Front of field (launch areas) = -Z = bottom of screen
  *   Back of field (far missions) = +Z = top of screen
+ * 
+ * Compound models converted from GearsBot FLL2024.json with axis correction:
+ *   GearsBot [X, Y, Z] -> Our [X, Z_gears_as_Y, Y_gears_as_Z]
+ *   Sizes also axis-swapped accordingly
  */
 
 export type MissionPartType = "static" | "dynamic" | "hinge" | "trigger";
+
+/** A sub-shape within a compound MissionPart */
+export interface CompoundChild {
+  shape: "box" | "cylinder" | "sphere";
+  size: { x: number; y: number; z: number };
+  position: { x: number; y: number; z: number }; // relative to parent part center
+  rotation?: { x: number; y: number; z: number }; // euler angles in radians
+  color: { r: number; g: number; b: number };
+}
 
 export interface MissionPart {
   id: string;
@@ -33,6 +46,8 @@ export interface MissionPart {
   hingeAnchorOffset?: { x: number; y: number; z: number }; // offset from part center to hinge pivot
   hingeDamping?: number; // angular damping for the hinge body
   label?: string; // display name for HUD
+  /** Optional compound children — if present, the part is rendered as a group of sub-shapes */
+  children?: CompoundChild[];
 }
 
 export interface MissionDefinition {
@@ -58,72 +73,63 @@ const HD = FD / 2; // half depth = 0.5715
  */
 export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   // ═══════════════════════════════════════════════════════════════
-  // M01: Coral Nursery (far-left, upper area)
+  // M01: Coral Nursery — GearsBot Object 0 (24 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M01",
     name: "Coral Nursery",
     shortName: "Coral",
     description: "Hang the coral tree on its support and flip the coral buds up.",
-    position: { x: -0.9, z: -0.06},
+    position: { x: -0.9, z: -0.06 },
     maxPoints: 50,
     parts: [
       {
-        id: "M01_base",
+        id: "M01_compound",
         type: "static",
         shape: "box",
-        size: { x: 0.12, y: 0.015, z: 0.10 },
-        position: { x: 0, y: 0.0075, z: 0 },
-        color: { r: 0.2, g: 0.6, b: 0.3 },
-        label: "Nursery Base",
-      },
-      {
-        id: "M01_support",
-        type: "static",
-        shape: "cylinder",
-        size: { x: 0.008, y: 0.10, z: 0.008 },
-        position: { x: 0, y: 0.065, z: 0 },
-        color: { r: 0.3, g: 0.7, b: 0.4 },
-        label: "Tree Support",
-      },
-      {
-        id: "M01_tree",
-        type: "dynamic",
-        shape: "cylinder",
-        size: { x: 0.015, y: 0.06, z: 0.015 },
-        position: { x: 0.06, y: 0.04, z: 0 },
-        color: { r: 0.9, g: 0.3, b: 0.5 },
-        mass: 0.04,
-        friction: 0.6,
-        restitution: 0.05,
-        label: "Coral Tree",
-      },
-      {
-        id: "M01_buds",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.06, y: 0.01, z: 0.04 },
-        position: { x: -0.04, y: 0.015, z: 0.04 },
-        color: { r: 1.0, g: 0.5, b: 0.7 },
-        mass: 0.02,
-        hingeAxis: "x",
-        hingeLimits: { min: 0, max: Math.PI / 2 },
-        hingeAnchorOffset: { x: 0, y: -0.005, z: -0.02 },
-        hingeDamping: 0.8,
-        label: "Coral Buds",
+        size: { x: 0.148, y: 0.192, z: 0.132 },
+        position: { x: 0, y: 0.096, z: 0 },
+        color: { r: 0.5, g: 0.5, b: 0.5 },
+        label: "Coral Nursery",
+        children: [
+          { shape: "box", size: { x: 0.04, y: 0.008, z: 0.056 }, position: { x: 0, y: -0.096, z: 0 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.008 }, position: { x: 0.0, y: -0.096, z: -0.032 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.024 }, position: { x: -0.032, y: -0.096, z: 0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.024 }, position: { x: 0.032, y: -0.096, z: 0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.016 }, position: { x: 0.0, y: -0.096, z: 0.036 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.032, y: 0.008, z: 0.04 }, position: { x: 0.06, y: -0.096, z: 0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.104, z: 0.008 }, position: { x: 0.0, y: 0.032, z: 0.04 }, color: { r: 0.133, g: 0.404, b: 0.761 } },
+          { shape: "box", size: { x: 0.008, y: 0.016, z: 0.008 }, position: { x: 0.0, y: -0.02, z: 0.056 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.024 }, position: { x: 0.0, y: -0.008, z: 0.064 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.008, y: 0.016, z: 0.008 }, position: { x: 0.0, y: -0.084, z: 0.04 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.104, z: 0.008 }, position: { x: 0.0, y: -0.048, z: 0.048 }, color: { r: 0.133, g: 0.404, b: 0.761 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.04 }, position: { x: 0.0, y: 0.0, z: 0.072 }, color: { r: 0.133, g: 0.404, b: 0.761 } },
+          { shape: "box", size: { x: 0.008, y: 0.016, z: 0.008 }, position: { x: 0.0, y: 0.076, z: 0.048 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "cylinder", size: { x: 0.036, y: 0.008, z: 0.036 }, position: { x: 0.0, y: 0.08, z: 0.0 }, color: { r: 1.0, g: 0.894, b: 0.0 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.0, y: 0.088, z: -0.032 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.024, z: 0.008 }, position: { x: 0.048, y: -0.064, z: 0.008 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.008 }, position: { x: 0.048, y: -0.088, z: 0.024 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.008 }, position: { x: 0.048, y: -0.088, z: -0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.024 }, position: { x: 0.088, y: -0.096, z: 0.008 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.016, y: 0.032, z: 0.024 }, position: { x: 0.092, y: -0.076, z: 0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "cylinder", size: { x: 0.008, y: 0.007, z: 0.008 }, position: { x: 0.096, y: -0.052, z: 0.016 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "cylinder", size: { x: 0.008, y: 0.007, z: 0.008 }, position: { x: 0.096, y: -0.052, z: 0.0 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.024 }, position: { x: 0.096, y: -0.04, z: 0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.016, z: 0.004 }, position: { x: 0.0, y: 0.004, z: 0.094 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+        ],
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M02: Shark (upper-center-left)
+  // M02: Shark (single box from GearsBot — kept simple)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M02",
     name: "Shark",
     shortName: "Shark",
     description: "Release the shark from its cave into the habitat.",
-    position: { x: -0.94, z: 0.43},
+    position: { x: -0.94, z: 0.43 },
     maxPoints: 30,
     parts: [
       {
@@ -160,90 +166,60 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M03: Coral Reef (upper-right area)
+  // M03: Coral Reef — GearsBot Object 2 (19 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M03",
     name: "Coral Reef",
     shortName: "Reef",
     description: "Flip the coral reef structure up without damaging nearby segments.",
-    position: { x: -0.35, z: 0.46},
+    position: { x: -0.35, z: 0.46 },
     maxPoints: 40,
     parts: [
       {
-        id: "M03_base",
+        id: "M03_compound",
         type: "static",
         shape: "box",
-        size: { x: 0.14, y: 0.01, z: 0.10 },
-        position: { x: 0, y: 0.005, z: 0 },
-        color: { r: 0.2, g: 0.5, b: 0.3 },
-        label: "Reef Base",
-      },
-      {
-        id: "M03_reef",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.08, y: 0.06, z: 0.01 },
-        position: { x: 0, y: 0.04, z: 0 },
-        color: { r: 0.1, g: 0.7, b: 0.4 },
-        mass: 0.025,
-        hingeAxis: "z",
-        hingeLimits: { min: 0, max: Math.PI / 2 },
-        hingeAnchorOffset: { x: 0, y: -0.03, z: 0 },
-        hingeDamping: 0.6,
+        size: { x: 0.136, y: 0.136, z: 0.136 },
+        position: { x: 0, y: 0.068, z: 0 },
+        color: { r: 0.5, g: 0.5, b: 0.5 },
         label: "Coral Reef",
-      },
-      {
-        id: "M03_seg1",
-        type: "dynamic",
-        shape: "cylinder",
-        size: { x: 0.012, y: 0.05, z: 0.012 },
-        position: { x: -0.05, y: 0.025, z: 0.04 },
-        color: { r: 0.3, g: 0.8, b: 0.5 },
-        mass: 0.015,
-        friction: 0.5,
-        restitution: 0.05,
-        label: "Reef Segment 1",
-      },
-      {
-        id: "M03_seg2",
-        type: "dynamic",
-        shape: "cylinder",
-        size: { x: 0.012, y: 0.05, z: 0.012 },
-        position: { x: 0.05, y: 0.025, z: 0.04 },
-        color: { r: 0.4, g: 0.9, b: 0.6 },
-        mass: 0.015,
-        friction: 0.5,
-        restitution: 0.05,
-        label: "Reef Segment 2",
-      },
-      {
-        id: "M03_seg3",
-        type: "dynamic",
-        shape: "cylinder",
-        size: { x: 0.012, y: 0.05, z: 0.012 },
-        position: { x: 0, y: 0.025, z: -0.04 },
-        color: { r: 0.35, g: 0.85, b: 0.55 },
-        mass: 0.015,
-        friction: 0.5,
-        restitution: 0.05,
-        label: "Reef Segment 3",
+        children: [
+          { shape: "cylinder", size: { x: 0.068, y: 0.006, z: 0.068 }, position: { x: 0, y: -0.068, z: 0 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.008, z: 0.012 }, position: { x: 0.0, y: -0.092, z: 0.0 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: 0.016, y: -0.076, z: 0.0 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: 0.0, y: -0.052, z: 0.016 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: -0.016, y: -0.06, z: 0.0 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: 0.016, y: -0.044, z: 0.0 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: 0.0, y: -0.036, z: -0.016 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: -0.016, y: -0.028, z: 0.0 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: 0.0, y: -0.068, z: -0.016 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.02, y: 0.006, z: 0.02 }, position: { x: 0.0, y: -0.02, z: 0.016 }, color: { r: 0.816, g: 0.741, b: 0.514 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.0, y: 0.036, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: -0.016, y: -0.004, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: 0.0, y: 0.036, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: 0.0, y: -0.012, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: 0.024, y: 0.012, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: -0.024, y: 0.012, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: 0.016, y: -0.004, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: 0.016, y: 0.028, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.004, z: 0.012 }, position: { x: -0.016, y: 0.028, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+        ],
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M04: Scuba Diver (left side, near M01)
+  // M04: Scuba Diver (no GearsBot model — kept simple)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M04",
     name: "Scuba Diver",
     shortName: "Diver",
     description: "Transport the scuba diver from the coral nursery to the coral reef support.",
-    position: { x: -0.83, z: 0.17},
+    position: { x: -0.83, z: 0.17 },
     maxPoints: 40,
     parts: [
-      // Diver figure (dynamic — small person-shaped, pushable)
       {
         id: "M04_diver",
         type: "dynamic",
@@ -256,7 +232,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.05,
         label: "Scuba Diver",
       },
-      // Starting platform (near coral nursery)
       {
         id: "M04_start",
         type: "static",
@@ -266,7 +241,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         color: { r: 0.3, g: 0.3, b: 0.6 },
         label: "Diver Start",
       },
-      // Target zone (near coral reef — M03 area)
       {
         id: "M04_reef_target",
         type: "trigger",
@@ -280,14 +254,14 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M05: Angler Fish (center-left, mid area — shipwreck zone)
+  // M05: Angler Fish — GearsBot Objects 4+5 (3 parts each)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M05",
     name: "Angler Fish",
     shortName: "Angler",
     description: "Push the angler fish into the shipwreck through the gate.",
-    position: { x: 0.0, z: -0.06},
+    position: { x: 0.0, z: -0.06 },
     maxPoints: 30,
     parts: [
       {
@@ -300,234 +274,177 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         label: "Shipwreck",
       },
       {
+        id: "M05_fishA",
+        type: "dynamic",
+        shape: "box",
+        size: { x: 0.032, y: 0.056, z: 0.024 },
+        position: { x: -0.12, y: 0.028, z: 0 },
+        color: { r: 0.5, g: 0.5, b: 0.5 },
+        mass: 0.04,
+        friction: 0.3,
+        restitution: 0.05,
+        label: "Angler Fish A",
+        children: [
+          { shape: "cylinder", size: { x: 0.012, y: 0.024, z: 0.012 }, position: { x: 0, y: 0, z: 0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.032, y: 0.032, z: 0.008 }, position: { x: 0.0, y: 0.028, z: 0.0 }, color: { r: 0.992, g: 0.416, b: 0.588 } },
+          { shape: "sphere", size: { x: 0.0115, y: 0.0115, z: 0.0115 }, position: { x: 0.0, y: -0.003, z: 0.0 }, color: { r: 0.549, g: 0.851, b: 0.953 } },
+        ],
+      },
+      {
+        id: "M05_fishB",
+        type: "dynamic",
+        shape: "box",
+        size: { x: 0.032, y: 0.056, z: 0.024 },
+        position: { x: -0.20, y: 0.028, z: 0 },
+        color: { r: 0.5, g: 0.5, b: 0.5 },
+        mass: 0.04,
+        friction: 0.3,
+        restitution: 0.05,
+        label: "Angler Fish B",
+        children: [
+          { shape: "cylinder", size: { x: 0.012, y: 0.024, z: 0.012 }, position: { x: 0, y: 0, z: 0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.032, y: 0.032, z: 0.008 }, position: { x: 0.0, y: 0.028, z: 0.0 }, color: { r: 0.639, g: 0.275, b: 0.549 } },
+          { shape: "sphere", size: { x: 0.0115, y: 0.0115, z: 0.0115 }, position: { x: 0.0, y: -0.003, z: 0.0 }, color: { r: 0.549, g: 0.851, b: 0.953 } },
+        ],
+      },
+      {
         id: "M05_gate",
         type: "hinge",
         shape: "box",
         size: { x: 0.01, y: 0.06, z: 0.08 },
         position: { x: -0.075, y: 0.04, z: 0 },
         color: { r: 0.5, g: 0.4, b: 0.25 },
-        mass: 0.02,
+        mass: 0.015,
         hingeAxis: "y",
         hingeLimits: { min: 0, max: Math.PI / 2 },
-        hingeAnchorOffset: { x: 0, y: 0, z: -0.04 },
-        hingeDamping: 1.0,
-        label: "Wreck Gate",
-      },
-      {
-        id: "M05_fish",
-        type: "dynamic",
-        shape: "sphere",
-        size: { x: 0.02, y: 0.02, z: 0.02 },
-        position: { x: -0.12, y: 0.02, z: 0 },
-        color: { r: 0.9, g: 0.7, b: 0.2 },
-        mass: 0.03,
-        friction: 0.4,
-        restitution: 0.1,
-        label: "Angler Fish",
-      },
-      {
-        id: "M05_target",
-        type: "trigger",
-        shape: "box",
-        size: { x: 0.08, y: 0.005, z: 0.06 },
-        position: { x: 0.02, y: 0.0025, z: 0 },
-        color: { r: 0.8, g: 0.6, b: 0.1 },
-        label: "Fish Target",
+        hingeAnchorOffset: { x: 0, y: -0.03, z: 0 },
+        hingeDamping: 0.5,
+        label: "Gate",
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M06: Raise the Mast (center of field — shipwreck)
+  // M06: Raise the Mast — GearsBot Object 3 (16 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M06",
     name: "Raise the Mast",
     shortName: "Mast",
-    description: "Push the lever to raise the shipwreck's mast upright.",
-    position: { x: -0.35, z: 0.06},
+    description: "Push the mast upright to raise the flag.",
+    position: { x: -0.55, z: 0.30 },
     maxPoints: 30,
     parts: [
       {
-        id: "M06_deck",
+        id: "M06_compound",
         type: "static",
         shape: "box",
-        size: { x: 0.16, y: 0.02, z: 0.10 },
-        position: { x: 0, y: 0.01, z: 0 },
-        color: { r: 0.45, g: 0.35, b: 0.25 },
-        label: "Ship Deck",
-      },
-      {
-        id: "M06_lever",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.015, y: 0.10, z: 0.015 },
-        position: { x: -0.06, y: 0.07, z: 0 },
-        color: { r: 0.7, g: 0.55, b: 0.35 },
-        mass: 0.02,
-        hingeAxis: "z",
-        hingeLimits: { min: -Math.PI / 3, max: Math.PI / 3 },
-        hingeAnchorOffset: { x: 0, y: -0.05, z: 0 },
-        hingeDamping: 0.5,
-        label: "Lever",
-      },
-      {
-        id: "M06_mast",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.015, y: 0.12, z: 0.015 },
-        position: { x: 0.03, y: 0.08, z: 0 },
-        color: { r: 0.6, g: 0.5, b: 0.3 },
-        mass: 0.03,
-        hingeAxis: "x",
-        hingeLimits: { min: -Math.PI / 2, max: 0 },
-        hingeAnchorOffset: { x: 0, y: -0.06, z: 0 },
-        hingeDamping: 1.2,
-        label: "Mast",
-      },
-      {
-        id: "M06_nest",
-        type: "dynamic",
-        shape: "cylinder",
-        size: { x: 0.012, y: 0.015, z: 0.012 },
-        position: { x: 0.03, y: 0.15, z: 0 },
-        color: { r: 0.5, g: 0.4, b: 0.25 },
-        mass: 0.01,
-        friction: 0.5,
-        label: "Crow's Nest",
+        size: { x: 0.108, y: 0.160, z: 0.156 },
+        position: { x: 0, y: 0.08, z: 0 },
+        color: { r: 0.5, g: 0.5, b: 0.5 },
+        label: "Mast Assembly",
+        children: [
+          { shape: "box", size: { x: 0.088, y: 0.008, z: 0.008 }, position: { x: 0, y: -0.08, z: 0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.104 }, position: { x: 0.04, y: -0.08, z: -0.056 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.088, y: 0.008, z: 0.008 }, position: { x: 0.0, y: -0.08, z: -0.112 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.104 }, position: { x: -0.04, y: -0.08, z: -0.056 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.152, z: 0.016 }, position: { x: 0.0, y: -0.008, z: 0.004 }, color: { r: 0.192, g: 0.741, b: 0.365 } },
+          { shape: "box", size: { x: 0.024, y: 0.016, z: 0.016 }, position: { x: 0.0, y: 0.06, z: -0.012 }, color: { r: 0.192, g: 0.741, b: 0.365 } },
+          { shape: "cylinder", size: { x: 0.024, y: 0.008, z: 0.024 }, position: { x: -0.024, y: -0.052, z: 0.0 }, color: { r: 0.502, g: 0.902, b: 0.502 } },
+          { shape: "cylinder", size: { x: 0.016, y: 0.008, z: 0.016 }, position: { x: 0.04, y: -0.06, z: 0.0 }, color: { r: 0.502, g: 0.902, b: 0.502 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.024 }, position: { x: 0.028, y: -0.08, z: -0.048 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.024 }, position: { x: -0.028, y: -0.08, z: -0.048 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: -0.024, y: -0.06, z: -0.056 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: 0.024, y: -0.06, z: -0.056 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.056 }, position: { x: -0.044, y: -0.08, z: -0.104 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.056 }, position: { x: 0.048, y: -0.08, z: -0.088 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "cylinder", size: { x: 0.04, y: 0.008, z: 0.04 }, position: { x: 0.0, y: 0.064, z: -0.06 }, color: { r: 1.0, g: 0.894, b: 0.0 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.0, y: 0.072, z: -0.096 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+        ],
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M07: Kraken's Treasure (center-left, below shipwreck)
+  // M07: Kraken's Treasure — GearsBot Object 7 (15 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M07",
     name: "Kraken's Treasure",
     shortName: "Kraken",
     description: "Retrieve the treasure chest from the kraken's nest.",
-    position: { x: -0.35, z: -0.06},
-    maxPoints: 20,
+    position: { x: -0.94, z: 0.20 },
+    maxPoints: 30,
     parts: [
-      // Kraken's nest (static enclosure)
       {
-        id: "M07_nest",
+        id: "M07_compound",
         type: "static",
         shape: "box",
-        size: { x: 0.10, y: 0.05, z: 0.10 },
-        position: { x: 0, y: 0.025, z: 0 },
-        color: { r: 0.35, g: 0.25, b: 0.15 },
+        size: { x: 0.120, y: 0.096, z: 0.129 },
+        position: { x: 0, y: 0.048, z: 0 },
+        color: { r: 0.4, g: 0.4, b: 0.4 },
         label: "Kraken's Nest",
+        children: [
+          { shape: "box", size: { x: 0.088, y: 0.008, z: 0.056 }, position: { x: 0, y: -0.048, z: 0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.024, z: 0.024 }, position: { x: -0.04, y: -0.032, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.064, y: 0.008, z: 0.024 }, position: { x: 0.012, y: -0.048, z: 0.04 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.088, z: 0.064 }, position: { x: 0.048, y: -0.008, z: 0.036 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.016, y: 0.04, z: 0.024 }, position: { x: 0.06, y: -0.032, z: 0.048 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.024, y: 0.04, z: 0.016 }, position: { x: 0.064, y: -0.032, z: 0.068 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: -0.016, y: -0.036, z: 0.056 }, color: { r: 0.678, g: 0.847, b: 0.286 } },
+          { shape: "box", size: { x: 0.024, y: 0.024, z: 0.008 }, position: { x: 0.016, y: 0.016, z: 0.072 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.04, z: 0.016 }, position: { x: 0.04, y: 0.024, z: 0.076 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.048, y: 0.056, z: 0.016 }, position: { x: 0.028, y: -0.024, z: 0.068 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.064, z: 0.008 }, position: { x: 0.0, y: -0.02, z: 0.056 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.08 }, position: { x: 0.04, y: -0.028, z: 0.012 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.055, y: -0.032, z: -0.041 }, color: { r: 0.678, g: 0.847, b: 0.286 } },
+        ],
       },
-      // Tentacle barrier (hinge — push to open)
-      {
-        id: "M07_tentacle",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.01, y: 0.05, z: 0.08 },
-        position: { x: -0.055, y: 0.035, z: 0 },
-        color: { r: 0.6, g: 0.2, b: 0.5 },
-        mass: 0.025,
-        hingeAxis: "y",
-        hingeLimits: { min: 0, max: Math.PI / 2 },
-        hingeAnchorOffset: { x: 0, y: 0, z: -0.04 },
-        hingeDamping: 0.8,
-        label: "Tentacle Gate",
-      },
-      // Treasure chest (dynamic — push out of nest)
       {
         id: "M07_chest",
         type: "dynamic",
         shape: "box",
-        size: { x: 0.035, y: 0.025, z: 0.03 },
-        position: { x: 0, y: 0.02, z: 0 },
-        color: { r: 0.85, g: 0.65, b: 0.1 },
-        mass: 0.04,
+        size: { x: 0.04, y: 0.03, z: 0.03 },
+        position: { x: 0.03, y: 0.015, z: 0.02 },
+        color: { r: 0.7, g: 0.5, b: 0.1 },
+        mass: 0.05,
         friction: 0.4,
         restitution: 0.05,
         label: "Treasure Chest",
-      },
-      // Outside zone (trigger — chest must be pushed here)
-      {
-        id: "M07_outside",
-        type: "trigger",
-        shape: "box",
-        size: { x: 0.15, y: 0.005, z: 0.15 },
-        position: { x: -0.15, y: 0.0025, z: 0 },
-        color: { r: 0.7, g: 0.5, b: 0.1 },
-        label: "Outside Zone",
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M08: Artificial Habitat (right side, upper-middle)
+  // M08: Artificial Habitat — GearsBot Object 8 (6 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M08",
     name: "Artificial Habitat",
     shortName: "Habitat",
-    description: "Rearrange habitat segments to create safe homes for sea creatures.",
-    position: { x: 0.24, z: -0.4},
+    description: "Stack the habitat segments to build the artificial reef.",
+    position: { x: -0.94, z: 0.10 },
     maxPoints: 40,
     parts: [
       {
-        id: "M08_base",
-        type: "static",
-        shape: "box",
-        size: { x: 0.10, y: 0.01, z: 0.10 },
-        position: { x: 0, y: 0.005, z: 0 },
-        color: { r: 0.8, g: 0.7, b: 0.2 },
-        label: "Habitat Base",
-      },
-      {
-        id: "M08_seg1",
+        id: "M08_compound",
         type: "dynamic",
         shape: "box",
-        size: { x: 0.06, y: 0.02, z: 0.06 },
-        position: { x: 0, y: 0.02, z: 0 },
-        color: { r: 0.9, g: 0.8, b: 0.3 },
-        mass: 0.04,
+        size: { x: 0.108, y: 0.020, z: 0.088 },
+        position: { x: 0, y: 0.058, z: 0 },
+        color: { r: 0.643, g: 0.643, b: 0.643 },
+        mass: 0.06,
         friction: 0.6,
         restitution: 0.02,
-        label: "Habitat Seg 1",
-      },
-      {
-        id: "M08_seg2",
-        type: "dynamic",
-        shape: "box",
-        size: { x: 0.06, y: 0.02, z: 0.06 },
-        position: { x: 0, y: 0.04, z: 0 },
-        color: { r: 0.85, g: 0.75, b: 0.25 },
-        mass: 0.04,
-        friction: 0.6,
-        restitution: 0.02,
-        label: "Habitat Seg 2",
-      },
-      {
-        id: "M08_seg3",
-        type: "dynamic",
-        shape: "box",
-        size: { x: 0.06, y: 0.02, z: 0.06 },
-        position: { x: 0, y: 0.06, z: 0 },
-        color: { r: 0.8, g: 0.7, b: 0.2 },
-        mass: 0.04,
-        friction: 0.6,
-        restitution: 0.02,
-        label: "Habitat Seg 3",
-      },
-      {
-        id: "M08_seg4",
-        type: "dynamic",
-        shape: "box",
-        size: { x: 0.06, y: 0.02, z: 0.06 },
-        position: { x: 0, y: 0.08, z: 0 },
-        color: { r: 0.85, g: 0.75, b: 0.25 },
-        mass: 0.035,
-        friction: 0.6,
-        restitution: 0.02,
-        label: "Habitat Seg 4",
+        label: "Habitat Assembly",
+        children: [
+          { shape: "box", size: { x: 0.088, y: 0.016, z: 0.024 }, position: { x: 0, y: 0, z: 0 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.008 }, position: { x: 0.02, y: -0.004, z: -0.016 }, color: { r: 0.973, g: 0.976, b: 0.984 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.008 }, position: { x: 0.02, y: -0.004, z: 0.016 }, color: { r: 0.973, g: 0.976, b: 0.984 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.032 }, position: { x: -0.008, y: 0.0, z: -0.028 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.032 }, position: { x: -0.008, y: 0.0, z: 0.028 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.008 }, position: { x: 0.052, y: 0.008, z: 0.0 }, color: { r: 0.973, g: 0.976, b: 0.984 } },
+        ],
       },
       {
         id: "M08_target",
@@ -542,27 +459,30 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M09: Unexpected Encounter (right side, middle)
+  // M09: Unexpected Encounter — GearsBot Object 6 (3 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M09",
     name: "Unexpected Encounter",
     shortName: "Creature",
     description: "Release the unknown creature from the AUV and deliver it to the cold seep.",
-    position: { x: 0.28, z: -0.11},
+    position: { x: 0.28, z: -0.11 },
     maxPoints: 30,
     parts: [
-      // AUV (Autonomous Underwater Vehicle) — static base
       {
         id: "M09_auv",
         type: "static",
         shape: "box",
-        size: { x: 0.10, y: 0.04, z: 0.06 },
-        position: { x: 0, y: 0.02, z: 0 },
-        color: { r: 0.6, g: 0.6, b: 0.65 },
+        size: { x: 0.032, y: 0.056, z: 0.024 },
+        position: { x: 0, y: 0.028, z: 0 },
+        color: { r: 0.5, g: 0.5, b: 0.5 },
         label: "AUV",
+        children: [
+          { shape: "cylinder", size: { x: 0.012, y: 0.024, z: 0.012 }, position: { x: 0, y: 0, z: 0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.032, y: 0.032, z: 0.008 }, position: { x: 0.0, y: 0.028, z: 0.0 }, color: { r: 0.208, g: 0.357, b: 0.243 } },
+          { shape: "sphere", size: { x: 0.0115, y: 0.0115, z: 0.0115 }, position: { x: 0.0, y: -0.003, z: 0.0 }, color: { r: 0.549, g: 0.851, b: 0.953 } },
+        ],
       },
-      // Unknown creature (dynamic — attached, needs to be released)
       {
         id: "M09_creature",
         type: "dynamic",
@@ -575,7 +495,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.1,
         label: "Unknown Creature",
       },
-      // Cold seep target zone
       {
         id: "M09_coldseep",
         type: "trigger",
@@ -589,42 +508,42 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M10: Send Over the Submersible (left side, lower-middle)
+  // M10: Send Over the Submersible — GearsBot Object 9 (15 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M10",
     name: "Send Over the Submersible",
     shortName: "Submersible",
     description: "Lower the yellow flag and send the submersible toward the opposing field.",
-    position: { x: 0.12, z: 0.4},
+    position: { x: 0.12, z: 0.4 },
     maxPoints: 40,
     parts: [
-      // Flag post (static)
       {
-        id: "M10_post",
+        id: "M10_compound",
         type: "static",
-        shape: "cylinder",
-        size: { x: 0.006, y: 0.08, z: 0.006 },
-        position: { x: 0, y: 0.04, z: 0 },
-        color: { r: 0.4, g: 0.4, b: 0.45 },
-        label: "Flag Post",
-      },
-      // Yellow flag (hinge — push down)
-      {
-        id: "M10_flag",
-        type: "hinge",
         shape: "box",
-        size: { x: 0.04, y: 0.025, z: 0.005 },
-        position: { x: 0.025, y: 0.07, z: 0 },
-        color: { r: 0.95, g: 0.85, b: 0.1 },
-        mass: 0.01,
-        hingeAxis: "z",
-        hingeLimits: { min: -Math.PI / 2, max: 0 },
-        hingeAnchorOffset: { x: -0.02, y: 0, z: 0 },
-        hingeDamping: 0.5,
-        label: "Yellow Flag",
+        size: { x: 0.080, y: 0.099, z: 0.032 },
+        position: { x: 0, y: 0.05, z: 0 },
+        color: { r: 0.3, g: 0.3, b: 0.3 },
+        label: "Submersible Assembly",
+        children: [
+          { shape: "box", size: { x: 0.016, y: 0.008, z: 0.008 }, position: { x: 0, y: -0.05, z: 0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.0, y: -0.042, z: -0.008 }, color: { r: 0.996, g: 0.886, b: 0.0 } },
+          { shape: "box", size: { x: 0.02, y: 0.016, z: 0.008 }, position: { x: 0.0, y: -0.054, z: -0.008 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.016, y: 0.016, z: 0.008 }, position: { x: 0.0, y: -0.07, z: -0.008 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.0, y: -0.042, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: 0.0, y: -0.042, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: -0.02, y: -0.034, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: -0.028, y: -0.014, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: -0.02, y: 0.006, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: 0.0, y: 0.014, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: 0.02, y: 0.006, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: 0.028, y: -0.014, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.012, y: 0.006, z: 0.012 }, position: { x: 0.02, y: -0.034, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.016, y: 0.004, z: 0.016 }, position: { x: 0.0, y: -0.08, z: -0.012 }, color: { r: 0.949, g: 0.549, b: 0.176 } },
+          { shape: "box", size: { x: 0.016, y: 0.016, z: 0.004 }, position: { x: 0.0, y: -0.054, z: 0.006 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+        ],
       },
-      // Submersible (dynamic — push toward opposing field)
       {
         id: "M10_sub",
         type: "dynamic",
@@ -637,7 +556,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.05,
         label: "Submersible",
       },
-      // Opposing field direction trigger
       {
         id: "M10_opposing",
         type: "trigger",
@@ -651,97 +569,87 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M11: Sonar Discovery (center, lower-middle)
+  // M11: Sonar Discovery — GearsBot Object 10 (20 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M11",
     name: "Sonar Discovery",
     shortName: "Sonar",
     description: "Push the panels to reveal hidden whales.",
-    position: { x: 0.59, z: 0.4},
+    position: { x: 0.59, z: 0.4 },
     maxPoints: 30,
     parts: [
       {
-        id: "M11_base",
+        id: "M11_compound",
         type: "static",
         shape: "box",
-        size: { x: 0.12, y: 0.01, z: 0.08 },
-        position: { x: 0, y: 0.005, z: 0 },
-        color: { r: 0.2, g: 0.3, b: 0.5 },
-        label: "Sonar Base",
-      },
-      {
-        id: "M11_whale1",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.04, y: 0.04, z: 0.008 },
-        position: { x: -0.03, y: 0.03, z: 0 },
-        color: { r: 0.3, g: 0.4, b: 0.7 },
-        mass: 0.015,
-        hingeAxis: "y",
-        hingeLimits: { min: 0, max: Math.PI / 2 },
-        hingeAnchorOffset: { x: -0.02, y: 0, z: 0 },
-        hingeDamping: 0.5,
-        label: "Whale Panel 1",
-      },
-      {
-        id: "M11_whale2",
-        type: "hinge",
-        shape: "box",
-        size: { x: 0.04, y: 0.04, z: 0.008 },
-        position: { x: 0.03, y: 0.03, z: 0 },
-        color: { r: 0.3, g: 0.4, b: 0.7 },
-        mass: 0.015,
-        hingeAxis: "y",
-        hingeLimits: { min: -Math.PI / 2, max: 0 },
-        hingeAnchorOffset: { x: 0.02, y: 0, z: 0 },
-        hingeDamping: 0.5,
-        label: "Whale Panel 2",
-      },
-      {
-        id: "M11_whale_hidden",
-        type: "static",
-        shape: "sphere",
-        size: { x: 0.015, y: 0.015, z: 0.015 },
-        position: { x: 0, y: 0.025, z: -0.015 },
-        color: { r: 0.2, g: 0.3, b: 0.6 },
-        label: "Hidden Whale",
+        size: { x: 0.212, y: 0.128, z: 0.116 },
+        position: { x: 0, y: 0.064, z: 0 },
+        color: { r: 0.4, g: 0.4, b: 0.4 },
+        label: "Sonar Assembly",
+        children: [
+          { shape: "box", size: { x: 0.032, y: 0.008, z: 0.088 }, position: { x: 0, y: -0.064, z: 0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.032, y: 0.008, z: 0.08 }, position: { x: 0.024, y: -0.064, z: 0.012 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.04, y: 0.088, z: 0.008 }, position: { x: 0.028, y: -0.016, z: 0.008 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.04, z: 0.04 }, position: { x: 0.004, y: -0.04, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.04, z: 0.04 }, position: { x: 0.052, y: -0.04, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: 0.028, y: -0.02, z: -0.02 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.016, y: 0.088, z: 0.008 }, position: { x: 0.016, y: -0.02, z: -0.02 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.016, y: 0.088, z: 0.008 }, position: { x: 0.04, y: -0.02, z: -0.02 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: 0.02, y: 0.02, z: -0.052 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: 0.036, y: 0.02, z: -0.052 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.008, y: 0.064, z: 0.088 }, position: { x: -0.004, y: -0.028, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.032, y: 0.048, z: 0.008 }, position: { x: -0.016, y: -0.028, z: 0.048 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.04, y: 0.004, z: 0.056 }, position: { x: -0.04, y: 0.0, z: 0.032 }, color: { r: 0.973, g: 0.976, b: 0.984 } },
+          { shape: "box", size: { x: 0.032, y: 0.008, z: 0.016 }, position: { x: 0.056, y: -0.064, z: 0.004 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.04, y: 0.008, z: 0.016 }, position: { x: 0.08, y: -0.052, z: 0.004 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "cylinder", size: { x: 0.04, y: 0.006, z: 0.04 }, position: { x: 0.112, y: -0.01, z: 0.004 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.016 }, position: { x: 0.144, y: 0.036, z: 0.0 }, color: { r: 0.192, g: 0.741, b: 0.365 } },
+          { shape: "cylinder", size: { x: 0.004, y: 0.008, z: 0.004 }, position: { x: 0.144, y: 0.056, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.104, y: 0.04, z: 0.008 }, position: { x: 0.1, y: -0.016, z: -0.028 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.104, y: 0.04, z: 0.008 }, position: { x: 0.1, y: -0.016, z: 0.04 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+        ],
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M12: Feed the Whale (right side, lower-middle)
+  // M12: Feed the Whale — GearsBot Object 12 (15 visual parts)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M12",
     name: "Feed the Whale",
     shortName: "Whale",
     description: "Collect krill and push them into the whale's mouth.",
-    position: { x: 0.94, z: 0.46},
+    position: { x: 0.94, z: 0.46 },
     maxPoints: 50,
     parts: [
-      // Whale body (static)
       {
-        id: "M12_whale",
+        id: "M12_compound",
         type: "static",
         shape: "box",
-        size: { x: 0.12, y: 0.06, z: 0.08 },
-        position: { x: 0, y: 0.03, z: 0 },
-        color: { r: 0.25, g: 0.3, b: 0.5 },
-        label: "Whale",
+        size: { x: 0.140, y: 0.096, z: 0.096 },
+        position: { x: 0, y: 0.048, z: 0 },
+        color: { r: 0.4, g: 0.4, b: 0.4 },
+        label: "Whale Assembly",
+        children: [
+          { shape: "box", size: { x: 0.056, y: 0.008, z: 0.072 }, position: { x: 0, y: -0.048, z: 0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "box", size: { x: 0.024, y: 0.008, z: 0.024 }, position: { x: 0.04, y: -0.048, z: 0.0 }, color: { r: 0.443, g: 0.443, b: 0.443 } },
+          { shape: "cylinder", size: { x: 0.008, y: 0.008, z: 0.008 }, position: { x: -0.036, y: -0.048, z: -0.024 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "cylinder", size: { x: 0.008, y: 0.008, z: 0.008 }, position: { x: -0.036, y: -0.048, z: 0.024 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.008, y: 0.056, z: 0.008 }, position: { x: 0.008, y: -0.024, z: -0.04 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.056, z: 0.008 }, position: { x: 0.008, y: -0.024, z: 0.04 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.016, z: 0.072 }, position: { x: 0.008, y: 0.004, z: 0.0 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.016, y: 0.04, z: 0.008 }, position: { x: -0.004, y: -0.032, z: 0.04 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.032, z: 0.008 }, position: { x: 0.008, y: 0.028, z: 0.016 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.008, y: 0.008, z: 0.024 }, position: { x: 0.008, y: 0.016, z: 0.0 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.008, y: 0.016, z: 0.008 }, position: { x: 0.008, y: 0.028, z: 0.008 }, color: { r: 0.643, g: 0.643, b: 0.643 } },
+          { shape: "box", size: { x: 0.088, y: 0.04, z: 0.008 }, position: { x: -0.04, y: -0.032, z: -0.048 }, color: { r: 0.235, g: 0.235, b: 0.235 } },
+          { shape: "box", size: { x: 0.056, y: 0.008, z: 0.008 }, position: { x: 0.024, y: -0.036, z: -0.016 }, color: { r: 0.875, g: 0.004, b: 0.0 } },
+          { shape: "box", size: { x: 0.056, y: 0.008, z: 0.008 }, position: { x: 0.024, y: -0.036, z: 0.016 }, color: { r: 0.875, g: 0.004, b: 0.0 } },
+          { shape: "box", size: { x: 0.048, y: 0.024, z: 0.04 }, position: { x: 0.032, y: -0.008, z: 0.0 }, color: { r: 0.875, g: 0.004, b: 0.0 } },
+        ],
       },
-      // Whale mouth (trigger zone)
-      {
-        id: "M12_mouth",
-        type: "trigger",
-        shape: "box",
-        size: { x: 0.06, y: 0.04, z: 0.06 },
-        position: { x: -0.08, y: 0.03, z: 0 },
-        color: { r: 0.4, g: 0.2, b: 0.3 },
-        label: "Whale Mouth",
-      },
-      // Krill pieces (5 dynamic pieces scattered nearby)
       {
         id: "M12_krill1",
         type: "dynamic",
@@ -779,41 +687,26 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         label: "Krill 3",
       },
       {
-        id: "M12_krill4",
-        type: "dynamic",
-        shape: "sphere",
-        size: { x: 0.01, y: 0.01, z: 0.01 },
-        position: { x: -0.22, y: 0.012, z: 0.03 },
-        color: { r: 0.95, g: 0.4, b: 0.2 },
-        mass: 0.01,
-        friction: 0.5,
-        restitution: 0.1,
-        label: "Krill 4",
-      },
-      {
-        id: "M12_krill5",
-        type: "dynamic",
-        shape: "sphere",
-        size: { x: 0.01, y: 0.01, z: 0.01 },
-        position: { x: -0.17, y: 0.012, z: -0.04 },
-        color: { r: 0.95, g: 0.4, b: 0.2 },
-        mass: 0.01,
-        friction: 0.5,
-        restitution: 0.1,
-        label: "Krill 5",
+        id: "M12_mouth",
+        type: "trigger",
+        shape: "box",
+        size: { x: 0.06, y: 0.04, z: 0.06 },
+        position: { x: -0.08, y: 0.03, z: 0 },
+        color: { r: 0.4, g: 0.2, b: 0.3 },
+        label: "Whale Mouth",
       },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M13: Change Shipping Lanes (center-right, lower area)
+  // M13: Change Shipping Lanes (no GearsBot model — kept simple)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M13",
     name: "Change Shipping Lanes",
     shortName: "Ship",
     description: "Push the cargo ship from lane 1 to lane 2.",
-    position: { x: 0.9, z: 0.0},
+    position: { x: 0.9, z: 0.0 },
     maxPoints: 20,
     parts: [
       {
@@ -859,17 +752,16 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M14: Sample Collection (center, lower area)
+  // M14: Sample Collection (no GearsBot model — kept simple)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M14",
     name: "Sample Collection",
     shortName: "Samples",
     description: "Collect water, seabed, and plankton samples plus trident pieces from around the field.",
-    position: { x: 0.94, z: 0.29},
+    position: { x: 0.94, z: 0.29 },
     maxPoints: 55,
     parts: [
-      // Water sample (dynamic — small blue cylinder)
       {
         id: "M14_water",
         type: "dynamic",
@@ -882,7 +774,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.05,
         label: "Water Sample",
       },
-      // Water sample area (trigger — sample starts here)
       {
         id: "M14_water_area",
         type: "trigger",
@@ -892,7 +783,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         color: { r: 0.2, g: 0.4, b: 0.8 },
         label: "Water Sample Area",
       },
-      // Seabed sample (dynamic — brown cylinder)
       {
         id: "M14_seabed",
         type: "dynamic",
@@ -905,7 +795,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.05,
         label: "Seabed Sample",
       },
-      // Seabed area (trigger)
       {
         id: "M14_seabed_area",
         type: "trigger",
@@ -915,7 +804,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         color: { r: 0.5, g: 0.35, b: 0.15 },
         label: "Seabed Area",
       },
-      // Plankton sample (dynamic — green cylinder)
       {
         id: "M14_plankton",
         type: "dynamic",
@@ -928,7 +816,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.05,
         label: "Plankton Sample",
       },
-      // Kelp forest area (trigger)
       {
         id: "M14_kelp_area",
         type: "trigger",
@@ -938,7 +825,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         color: { r: 0.15, g: 0.6, b: 0.2 },
         label: "Kelp Forest Area",
       },
-      // Trident piece 1 (dynamic — near shipwreck area)
       {
         id: "M14_trident1",
         type: "dynamic",
@@ -951,7 +837,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         restitution: 0.05,
         label: "Trident Piece 1",
       },
-      // Trident piece 2
       {
         id: "M14_trident2",
         type: "dynamic",
@@ -968,17 +853,16 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // M15: Research Vessel (far-right, lower area)
+  // M15: Research Vessel (no GearsBot model — kept simple)
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M15",
     name: "Research Vessel",
     shortName: "Vessel",
     description: "Dock the research vessel and load collected samples, trident parts, and treasure chest.",
-    position: { x: -0.35, z: -0.46},
+    position: { x: -0.35, z: -0.46 },
     maxPoints: 40,
     parts: [
-      // Research vessel hull (static)
       {
         id: "M15_hull",
         type: "static",
@@ -988,7 +872,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         color: { r: 0.7, g: 0.7, b: 0.75 },
         label: "Research Vessel",
       },
-      // Cargo area (trigger — items must be placed here)
       {
         id: "M15_cargo",
         type: "trigger",
@@ -998,7 +881,6 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
         color: { r: 0.3, g: 0.6, b: 0.3 },
         label: "Cargo Area",
       },
-      // Port latch (hinge — push to dock)
       {
         id: "M15_latch",
         type: "hinge",
