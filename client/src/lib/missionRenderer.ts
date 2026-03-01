@@ -310,13 +310,13 @@ function getHingeAxis(axis: "x" | "y" | "z"): RAPIER.Vector3 {
  * Create a floating label above a mission
  */
 function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
-  const labelHeight = 0.22;
-  // Ultra-high-resolution texture for maximum crispness
+  const labelHeight = 0.28;
+  // High-resolution texture for crisp text on a compact label
   const texW = 2048;
   const texH = 512;
-  // Larger plane in world space for readability at distance
-  const planeW = 0.38;
-  const planeH = 0.095;
+  // Compact plane — readable but doesn't block models
+  const planeW = 0.22;
+  const planeH = 0.055;
 
   const plane = MeshBuilder.CreatePlane(`label_${mission.id}`, {
     width: planeW,
@@ -366,23 +366,23 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   ctx.lineWidth = 8;
   ctx.stroke();
 
-  // Draw mission ID — extra large, bold, bright cyan with glow
+  // Draw mission ID — bold, bright cyan with glow
   ctx.shadowColor = "#00e5ff";
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 10;
   ctx.font = "bold 180px 'Courier New', monospace";
   ctx.fillStyle = "#00ffff";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(mission.id, pad + 48, texH / 2);
 
-  // Draw mission name — large, bold, bright white with glow
+  // Draw mission name — bold, bright white with glow
   const idWidth = ctx.measureText(mission.id).width;
   ctx.shadowColor = "#ffffff";
-  ctx.shadowBlur = 8;
-  ctx.font = "bold 120px Arial, Helvetica, sans-serif";
+  ctx.shadowBlur = 6;
+  ctx.font = "bold 110px Arial, Helvetica, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
-  const nameX = pad + 48 + idWidth + 40;
+  const nameX = pad + 48 + idWidth + 36;
   const maxNameW = texW - nameX - pad - 48;
   // Truncate name if too long
   let displayName = mission.name;
