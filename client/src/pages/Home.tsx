@@ -179,52 +179,74 @@ export default function Home() {
 
       {/* Right side: Mission Scoring Panel */}
       <div className="absolute top-[110px] right-4 z-10 max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
-        <HudPanel title="Mission Scoring" className="relative min-w-[220px]">
-          <div className="flex flex-col gap-1.5">
+        <HudPanel title="Mission Scoring" className="relative min-w-[280px] max-w-[300px]">
+          <div className="flex flex-col gap-2">
             {match.missions.map((m) => {
               const allComplete = m.conditions.length > 0 && m.conditions.every((c) => c.completed);
               const someComplete = m.conditions.some((c) => c.completed);
 
               return (
-                <div key={m.missionId} className="group">
-                  <div className="flex items-center justify-between gap-2 py-0.5">
+                <div key={m.missionId} className={`rounded px-2 py-1.5 transition-colors duration-200 ${
+                  allComplete ? "bg-green-400/8 border border-green-400/20" :
+                  someComplete ? "bg-amber-score/5 border border-amber-score/15" :
+                  "bg-white/[0.02] border border-transparent"
+                }`}>
+                  {/* Mission header row */}
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       {allComplete ? (
-                        <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
                       ) : someComplete ? (
-                        <Circle className="w-3 h-3 text-amber-score flex-shrink-0" />
+                        <Circle className="w-3.5 h-3.5 text-amber-score flex-shrink-0" />
                       ) : (
-                        <Circle className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
+                        <Circle className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0" />
                       )}
-                      <span className={`data-readout text-[10px] w-7 ${allComplete ? "text-green-400" : "text-cyan-glow/80"}`}>
+                      <span className={`data-readout text-[11px] font-bold ${allComplete ? "text-green-400" : "text-cyan-glow"}`}>
                         {m.missionId}
                       </span>
-                      <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">
+                      <span className={`text-[10px] font-medium ${allComplete ? "text-green-400/80" : "text-foreground/80"}`}>
                         {m.missionName}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className={`data-readout text-[10px] ${m.earnedPoints > 0 ? "text-green-400" : "text-muted-foreground/40"}`}>
+                      <span className={`data-readout text-[11px] font-bold ${m.earnedPoints > 0 ? "text-green-400" : "text-muted-foreground/30"}`}>
                         {m.earnedPoints}
                       </span>
-                      <span className="text-[8px] text-muted-foreground/40">/</span>
-                      <span className="data-readout text-[10px] text-amber-score/70">{m.maxPoints}</span>
+                      <span className="text-[9px] text-muted-foreground/30">/</span>
+                      <span className="data-readout text-[11px] text-amber-score/70">{m.maxPoints}</span>
                     </div>
                   </div>
-                  {/* Condition details (show on hover or when partially complete) */}
+                  {/* Scoring conditions with hints */}
                   {m.conditions.length > 0 && (
-                    <div className="ml-5 mt-0.5 mb-1 space-y-0.5">
+                    <div className="ml-5 mt-1 space-y-1">
                       {m.conditions.map((c, ci) => (
-                        <div key={ci} className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1">
-                            <div className={`w-1 h-1 rounded-full ${c.completed ? "bg-green-400" : "bg-muted-foreground/30"}`} />
-                            <span className={`text-[8px] ${c.completed ? "text-green-400/80" : "text-muted-foreground/50"}`}>
-                              {c.description}
+                        <div key={ci} className="flex flex-col gap-0.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1">
+                              <div className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                c.completed ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.5)]" : "bg-muted-foreground/25"
+                              }`} />
+                              <span className={`text-[9px] font-medium ${
+                                c.completed ? "text-green-400 line-through opacity-70" : "text-foreground/70"
+                              }`}>
+                                {c.description}
+                              </span>
+                            </div>
+                            <span className={`data-readout text-[9px] font-bold ${
+                              c.completed ? "text-green-400" : "text-muted-foreground/25"
+                            }`}>
+                              {c.completed ? `+${c.points}` : c.points}
                             </span>
                           </div>
-                          <span className={`data-readout text-[8px] ${c.completed ? "text-green-400" : "text-muted-foreground/30"}`}>
-                            {c.completed ? `+${c.points}` : c.points}
-                          </span>
+                          {/* How-to hint — only show when not yet completed */}
+                          {!c.completed && (
+                            <div className="ml-3 flex items-start gap-1">
+                              <span className="text-[8px] text-cyan-glow/40 mt-px">▶</span>
+                              <span className="text-[8px] text-cyan-glow/50 italic leading-tight">
+                                {c.hint}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -232,10 +254,10 @@ export default function Home() {
                 </div>
               );
             })}
-            <div className="w-full h-px bg-cyan-glow/10 my-1" />
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Score</span>
-              <span className={`data-readout text-[13px] font-bold ${match.totalScore > 0 ? "text-amber-score" : "text-muted-foreground/50"}`}>
+            <div className="w-full h-px bg-cyan-glow/15 my-1" />
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Total Score</span>
+              <span className={`data-readout text-[15px] font-bold ${match.totalScore > 0 ? "text-amber-score" : "text-muted-foreground/40"}`}>
                 {match.totalScore}pt
               </span>
             </div>

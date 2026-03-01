@@ -21,6 +21,8 @@ export type MatchPhase = "idle" | "running" | "ended";
 export interface ScoringCondition {
   /** Human-readable description */
   description: string;
+  /** Short hint telling the player HOW to score this condition */
+  hint: string;
   /** Points awarded when this condition is met */
   points: number;
   /** Check function: receives the mission's rendered parts and returns true if condition is met */
@@ -37,6 +39,7 @@ export interface MissionScoreState {
   earnedPoints: number;
   conditions: {
     description: string;
+    hint: string;
     points: number;
     completed: boolean;
   }[];
@@ -102,6 +105,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M01: [
     {
       description: "Coral tree is on the support",
+      hint: "Push the coral tree onto the raised support structure",
       points: 30,
       check: (parts) => {
         const tree = getPartPosition(parts, "M01_tree");
@@ -113,6 +117,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
     },
     {
       description: "Coral buds are flipped up",
+      hint: "Push the hinge lever to flip coral buds upward",
       points: 20,
       check: (parts) => {
         const angle = getHingeAngle(parts, "M01_buds");
@@ -127,6 +132,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M02: [
     {
       description: "Shark is in the habitat",
+      hint: "Push the grey shark into the blue habitat zone",
       points: 30,
       check: (parts) => {
         const shark = getPartPosition(parts, "M02_shark");
@@ -142,6 +148,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M03: [
     {
       description: "Coral reef panel is raised",
+      hint: "Push the reef panel to flip it upward past 45°",
       points: 20,
       check: (parts) => {
         const angle = getHingeAngle(parts, "M03_reef");
@@ -151,6 +158,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
     },
     {
       description: "Reef segments still standing",
+      hint: "Bonus: don't knock over the reef segments while raising the panel",
       points: 15,
       check: (parts) => {
         // Both segments should still be upright (Y > 0.015)
@@ -169,6 +177,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M05: [
     {
       description: "Angler fish is in the shipwreck",
+      hint: "Push the angler fish into the shipwreck target zone",
       points: 30,
       check: (parts) => {
         const fish = getPartPosition(parts, "M05_fish");
@@ -183,6 +192,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M06: [
     {
       description: "Mast is raised upright",
+      hint: "Push the mast lever to raise it to an upright position",
       points: 30,
       check: (parts) => {
         const angle = getHingeAngle(parts, "M06_mast");
@@ -197,6 +207,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M08: [
     {
       description: "At least 2 segments in target zone",
+      hint: "Push at least 2 habitat segments into the marked target area",
       points: 20,
       check: (parts) => {
         const target = getTriggerCenter(parts, "M08_target");
@@ -211,6 +222,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
     },
     {
       description: "All 4 segments in target zone",
+      hint: "Push all 4 habitat segments into the target area for bonus",
       points: 20,
       check: (parts) => {
         const target = getTriggerCenter(parts, "M08_target");
@@ -229,6 +241,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M11: [
     {
       description: "Whale panel 1 opened",
+      hint: "Push the left whale panel to swing it open",
       points: 15,
       check: (parts) => {
         const angle = getHingeAngle(parts, "M11_whale1");
@@ -238,6 +251,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
     },
     {
       description: "Whale panel 2 opened",
+      hint: "Push the right whale panel to swing it open",
       points: 15,
       check: (parts) => {
         const angle = getHingeAngle(parts, "M11_whale2");
@@ -251,6 +265,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
   M13: [
     {
       description: "Cargo ship moved to lane 2",
+      hint: "Push the cargo ship sideways into the lane 2 target zone",
       points: 20,
       check: (parts) => {
         const ship = getPartPosition(parts, "M13_ship");
@@ -292,6 +307,7 @@ export class ScoringEngine {
         earnedPoints: 0,
         conditions: rules.map((r) => ({
           description: r.description,
+          hint: r.hint,
           points: r.points,
           completed: false,
         })),
@@ -419,7 +435,7 @@ export class ScoringEngine {
       totalScore += ms.earnedPoints;
       missionStates.push({
         ...ms,
-        conditions: ms.conditions.map((c: { description: string; points: number; completed: boolean }) => ({ ...c })),
+        conditions: ms.conditions.map((c: { description: string; hint: string; points: number; completed: boolean }) => ({ ...c })),
       });
     });
 

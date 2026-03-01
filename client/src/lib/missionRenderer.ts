@@ -116,13 +116,15 @@ function renderPart(
   mat.diffuseColor = new Color3(part.color.r, part.color.g, part.color.b);
 
   if (part.type === "trigger") {
-    // Trigger zones are semi-transparent
-    mat.alpha = 0.25;
+    // Trigger zones are semi-transparent with pulsing glow
+    mat.alpha = 0.35;
     mat.emissiveColor = new Color3(
-      part.color.r * 0.3,
-      part.color.g * 0.3,
-      part.color.b * 0.3
+      part.color.r * 0.6,
+      part.color.g * 0.6,
+      part.color.b * 0.6
     );
+    // Add wireframe overlay for better visibility
+    mat.wireframe = false;
   } else {
     mat.specularColor = new Color3(0.15, 0.15, 0.15);
     mat.emissiveColor = new Color3(
@@ -308,38 +310,81 @@ function getHingeAxis(axis: "x" | "y" | "z"): RAPIER.Vector3 {
  * Create a floating label above a mission
  */
 function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
-  const labelHeight = 0.18;
+  const labelHeight = 0.22;
+  const texW = 512;
+  const texH = 128;
+  const planeW = 0.22;
+  const planeH = 0.055;
+
   const plane = MeshBuilder.CreatePlane(`label_${mission.id}`, {
-    width: 0.12,
-    height: 0.025,
+    width: planeW,
+    height: planeH,
   }, scene);
 
   const mat = new StandardMaterial(`labelMat_${mission.id}`, scene);
   mat.diffuseColor = new Color3(0, 0, 0);
-  mat.emissiveColor = new Color3(0, 0.8, 1.0);
-  mat.alpha = 0.85;
+  mat.emissiveColor = new Color3(1, 1, 1);
+  mat.alpha = 0.95;
   mat.backFaceCulling = false;
+  mat.disableLighting = true;
   plane.material = mat;
 
   plane.position.set(mission.position.x, labelHeight, mission.position.z);
   plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
 
-  // Create a dynamic texture for the label text
-  const textureSize = 256;
+  // Create a dynamic texture with background pill + ID + name
   const dynamicTexture = new DynamicTexture(
     `labelTex_${mission.id}`,
-    { width: textureSize, height: 64 },
+    { width: texW, height: texH },
     scene,
     false
   );
   dynamicTexture.hasAlpha = true;
   const ctx = dynamicTexture.getContext() as CanvasRenderingContext2D;
-  ctx.clearRect(0, 0, textureSize, 64);
-  ctx.font = "bold 24px monospace";
+  ctx.clearRect(0, 0, texW, texH);
+
+  // Draw rounded background pill
+  const r = 20;
+  const pad = 8;
+  ctx.beginPath();
+  ctx.moveTo(pad + r, pad);
+  ctx.lineTo(texW - pad - r, pad);
+  ctx.quadraticCurveTo(texW - pad, pad, texW - pad, pad + r);
+  ctx.lineTo(texW - pad, texH - pad - r);
+  ctx.quadraticCurveTo(texW - pad, texH - pad, texW - pad - r, texH - pad);
+  ctx.lineTo(pad + r, texH - pad);
+  ctx.quadraticCurveTo(pad, texH - pad, pad, texH - pad - r);
+  ctx.lineTo(pad, pad + r);
+  ctx.quadraticCurveTo(pad, pad, pad + r, pad);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(0, 10, 20, 0.85)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0, 212, 255, 0.6)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Draw mission ID (bold, cyan)
+  ctx.font = "bold 42px monospace";
   ctx.fillStyle = "#00d4ff";
-  ctx.textAlign = "center";
+  ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(mission.id, textureSize / 2, 32);
+  ctx.fillText(mission.id, pad + 20, texH / 2);
+
+  // Draw mission name (smaller, white)
+  const idWidth = ctx.measureText(mission.id).width;
+  ctx.font = "28px sans-serif";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.textAlign = "left";
+  const nameX = pad + 20 + idWidth + 12;
+  const maxNameW = texW - nameX - pad - 16;
+  // Truncate name if too long
+  let displayName = mission.name;
+  while (ctx.measureText(displayName).width > maxNameW && displayName.length > 3) {
+    displayName = displayName.slice(0, -1);
+  }
+  if (displayName !== mission.name) displayName += "…";
+  ctx.fillText(displayName, nameX, texH / 2 + 2);
+
   dynamicTexture.update();
   mat.diffuseTexture = dynamicTexture;
   mat.opacityTexture = dynamicTexture;
