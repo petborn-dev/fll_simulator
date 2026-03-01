@@ -34,6 +34,7 @@ import {
 import RAPIER from "@dimforge/rapier3d-compat";
 import { getSeasonMissions } from "@/lib/missions";
 import { renderMissions, syncMissionPhysics, type RenderedMission } from "@/lib/missionRenderer";
+import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
 
 // FLL field dimensions in meters (real: 2362mm x 1143mm)
 const FIELD_WIDTH = 2.362;
@@ -72,6 +73,7 @@ interface SceneState {
   keysPressed: Set<string>;
   missionCount: number;
   season: string;
+  match: MatchState;
 }
 
 // Pre-allocated temp vectors to avoid per-frame allocations
@@ -104,6 +106,7 @@ export function useBabylonScene() {
   const disposedRef = useRef(false);
 
   const missionsRef = useRef<RenderedMission[]>([]);
+  const scoringEngineRef = useRef<ScoringEngine>(new ScoringEngine());
 
   const [sceneState, setSceneState] = useState<SceneState>({
     fps: 0,
@@ -113,6 +116,12 @@ export function useBabylonScene() {
     keysPressed: new Set(),
     missionCount: 0,
     season: "SUBMERGED 2024-25",
+    match: {
+      phase: "idle",
+      timeRemaining: MATCH_DURATION_SECONDS,
+      totalScore: 0,
+      missions: [],
+    },
   });
 
   const resetScene = useCallback(() => {
@@ -128,6 +137,21 @@ export function useBabylonScene() {
     robotBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
     robotBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
     physicsStepRef.current = 0;
+    scoringEngineRef.current.reset();
+    scoringEngineRef.current.initMissions(missionsRef.current);
+  }, []);
+
+  const startMatch = useCallback(() => {
+    scoringEngineRef.current.start();
+  }, []);
+
+  const stopMatch = useCallback(() => {
+    scoringEngineRef.current.stop();
+  }, []);
+
+  const resetMatch = useCallback(() => {
+    scoringEngineRef.current.reset();
+    scoringEngineRef.current.initMissions(missionsRef.current);
   }, []);
 
   useEffect(() => {
@@ -260,6 +284,10 @@ export function useBabylonScene() {
       const renderedMissions = renderMissions(missionDefs, scene, world, shadowGenerator);
       missionsRef.current = renderedMissions;
 
+      // === SCORING ENGINE ===
+      scoringEngineRef.current.reset();
+      scoringEngineRef.current.initMissions(renderedMissions);
+
       // === KEYBOARD INPUT ===
       onKeyDown = (e: KeyboardEvent) => {
         const key = e.key.toLowerCase();
@@ -303,6 +331,9 @@ export function useBabylonScene() {
         // Sync mission model meshes with physics
         syncMissionPhysics(renderedMissions);
 
+        // Tick scoring engine (checks conditions every frame)
+        scoringEngineRef.current.tick(renderedMissions, world);
+
         // Camera follows robot (smooth lerp)
         camera.target.x += (pos.x - camera.target.x) * 0.08;
         camera.target.y += (0.15 - camera.target.y) * 0.08;
@@ -334,6 +365,7 @@ export function useBabylonScene() {
             keysPressed: new Set(keysRef.current),
             missionCount: renderedMissions.length,
             season: "SUBMERGED 2024-25",
+            match: scoringEngineRef.current.getState(),
           });
         }
       });
@@ -389,7 +421,7 @@ export function useBabylonScene() {
     return cleanup;
   }, []);
 
-  return { canvasRef, sceneState, resetScene };
+  return { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch };
 }
 
 // ==========================================

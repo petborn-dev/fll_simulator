@@ -1,20 +1,39 @@
 /**
- * FLL 3D Simulator — Phase 3.5: Enhanced Game Environment
- * Design: Mission Control HUD — full-bleed 3D viewport with floating panels
- * Features: Official SUBMERGED field mat texture, enhanced hinge/flip physics
+ * FLL 3D Simulator — Phase 4: Scoring System & Match Timer
+ * Design: Mission Control HUD with match timer, live scoring, and match controls
+ * Features: 2:30 countdown, per-mission scoring conditions, start/stop/reset
  */
 
 import { useBabylonScene } from "@/hooks/useBabylonScene";
 import { HudPanel, DataReadout } from "@/components/HudPanel";
+import { ScoringEngine } from "@/lib/scoringEngine";
 import {
   RotateCcw, Compass, Gauge, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  Cpu, Zap, Box, Anchor, Target
+  Cpu, Zap, Box, Anchor, Target, Play, Square, Timer, Trophy,
+  CheckCircle2, Circle,
 } from "lucide-react";
 
 export default function Home() {
-  const { canvasRef, sceneState, resetScene } = useBabylonScene();
+  const { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch } = useBabylonScene();
 
   const isKeyActive = (key: string) => sceneState.keysPressed.has(key);
+  const { match } = sceneState;
+  const formattedTime = ScoringEngine.formatTime(match.timeRemaining);
+  const isRunning = match.phase === "running";
+  const isEnded = match.phase === "ended";
+
+  // Timer color based on remaining time
+  const timerColor = match.timeRemaining <= 10
+    ? "text-red-400"
+    : match.timeRemaining <= 30
+      ? "text-amber-score"
+      : "text-cyan-glow";
+
+  const timerGlow = match.timeRemaining <= 10
+    ? "shadow-[0_0_12px_rgba(255,80,80,0.4)]"
+    : match.timeRemaining <= 30
+      ? "shadow-[0_0_12px_rgba(255,180,50,0.3)]"
+      : "";
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-background">
@@ -37,14 +56,94 @@ export default function Home() {
         </div>
       )}
 
+      {/* Match ended overlay */}
+      {isEnded && (
+        <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+          <div className="hud-panel glow-cyan px-8 py-6 text-center pointer-events-auto animate-in fade-in zoom-in-95 duration-300">
+            <Trophy className="w-10 h-10 text-amber-score mx-auto mb-3" />
+            <div className="text-xl font-bold text-amber-score data-readout mb-1">
+              MATCH ENDED
+            </div>
+            <div className="text-3xl font-bold text-cyan-glow data-readout mb-4">
+              {match.totalScore} pts
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { resetScene(); resetMatch(); }}
+                className="flex items-center gap-2 px-4 py-2 rounded bg-cyan-glow/10 border border-cyan-glow/30 
+                           text-cyan-glow text-xs font-medium tracking-wider uppercase
+                           hover:bg-cyan-glow/20 hover:border-cyan-glow/50 transition-all duration-200"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                New Match
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top-center: Match Timer */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <HudPanel className="relative">
+          <div className="flex items-center gap-4">
+            <Timer className={`w-4 h-4 ${isRunning ? "text-cyan-glow animate-pulse" : "text-muted-foreground"}`} />
+            <div className={`data-readout text-2xl font-bold tracking-wider ${timerColor} ${timerGlow} transition-all duration-300`}>
+              {formattedTime}
+            </div>
+            <div className="w-px h-8 bg-cyan-glow/20" />
+            <div className="flex items-center gap-2">
+              {!isRunning && !isEnded && (
+                <button
+                  onClick={startMatch}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-green-500/15 border border-green-500/40 
+                             text-green-400 text-[10px] font-medium tracking-wider uppercase
+                             hover:bg-green-500/25 hover:border-green-500/60 transition-all duration-200"
+                >
+                  <Play className="w-3 h-3" />
+                  Start
+                </button>
+              )}
+              {isRunning && (
+                <button
+                  onClick={stopMatch}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/15 border border-red-500/40 
+                             text-red-400 text-[10px] font-medium tracking-wider uppercase
+                             hover:bg-red-500/25 hover:border-red-500/60 transition-all duration-200"
+                >
+                  <Square className="w-3 h-3" />
+                  Stop
+                </button>
+              )}
+              <button
+                onClick={() => { resetScene(); resetMatch(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-cyan-glow/10 border border-cyan-glow/30 
+                           text-cyan-glow text-[10px] font-medium tracking-wider uppercase
+                           hover:bg-cyan-glow/20 hover:border-cyan-glow/50 transition-all duration-200"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset
+              </button>
+            </div>
+            <div className="w-px h-8 bg-cyan-glow/20" />
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-score" />
+              <span className="data-readout text-xl font-bold text-amber-score">
+                {match.totalScore}
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">pts</span>
+            </div>
+          </div>
+        </HudPanel>
+      </div>
+
       {/* Top-left: Title & Season */}
       <div className="absolute top-4 left-4 z-10">
         <HudPanel title="FLL 3D Simulator" className="relative">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] uppercase tracking-wider text-green-400/80">
-                Phase 3.5 — Enhanced Environment
+              <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? "bg-green-400 animate-pulse" : "bg-muted-foreground"}`} />
+              <span className={`text-[10px] uppercase tracking-wider ${isRunning ? "text-green-400/80" : "text-muted-foreground"}`}>
+                {isRunning ? "Match Running" : isEnded ? "Match Ended" : "Phase 4 — Scoring System"}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -78,32 +177,67 @@ export default function Home() {
         </HudPanel>
       </div>
 
-      {/* Right side: Mission List */}
+      {/* Right side: Mission Scoring Panel */}
       <div className="absolute top-[110px] right-4 z-10 max-h-[calc(100vh-200px)] overflow-y-auto scrollbar-thin">
-        <HudPanel title="Missions" className="relative min-w-[160px]">
-          <div className="flex flex-col gap-1">
-            {[
-              { id: "M01", name: "Coral Nursery", pts: 50 },
-              { id: "M02", name: "Shark", pts: 30 },
-              { id: "M03", name: "Coral Reef", pts: 35 },
-              { id: "M05", name: "Angler Fish", pts: 30 },
-              { id: "M06", name: "Raise the Mast", pts: 30 },
-              { id: "M08", name: "Artificial Habitat", pts: 40 },
-              { id: "M11", name: "Sonar Discovery", pts: 30 },
-              { id: "M13", name: "Shipping Lanes", pts: 20 },
-            ].map((m) => (
-              <div key={m.id} className="flex items-center justify-between gap-2 py-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="data-readout text-[10px] text-cyan-glow/80 w-6">{m.id}</span>
-                  <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">{m.name}</span>
+        <HudPanel title="Mission Scoring" className="relative min-w-[220px]">
+          <div className="flex flex-col gap-1.5">
+            {match.missions.map((m) => {
+              const allComplete = m.conditions.length > 0 && m.conditions.every((c) => c.completed);
+              const someComplete = m.conditions.some((c) => c.completed);
+
+              return (
+                <div key={m.missionId} className="group">
+                  <div className="flex items-center justify-between gap-2 py-0.5">
+                    <div className="flex items-center gap-1.5">
+                      {allComplete ? (
+                        <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
+                      ) : someComplete ? (
+                        <Circle className="w-3 h-3 text-amber-score flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
+                      )}
+                      <span className={`data-readout text-[10px] w-7 ${allComplete ? "text-green-400" : "text-cyan-glow/80"}`}>
+                        {m.missionId}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">
+                        {m.missionName}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className={`data-readout text-[10px] ${m.earnedPoints > 0 ? "text-green-400" : "text-muted-foreground/40"}`}>
+                        {m.earnedPoints}
+                      </span>
+                      <span className="text-[8px] text-muted-foreground/40">/</span>
+                      <span className="data-readout text-[10px] text-amber-score/70">{m.maxPoints}</span>
+                    </div>
+                  </div>
+                  {/* Condition details (show on hover or when partially complete) */}
+                  {m.conditions.length > 0 && (
+                    <div className="ml-5 mt-0.5 mb-1 space-y-0.5">
+                      {m.conditions.map((c, ci) => (
+                        <div key={ci} className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1">
+                            <div className={`w-1 h-1 rounded-full ${c.completed ? "bg-green-400" : "bg-muted-foreground/30"}`} />
+                            <span className={`text-[8px] ${c.completed ? "text-green-400/80" : "text-muted-foreground/50"}`}>
+                              {c.description}
+                            </span>
+                          </div>
+                          <span className={`data-readout text-[8px] ${c.completed ? "text-green-400" : "text-muted-foreground/30"}`}>
+                            {c.completed ? `+${c.points}` : c.points}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="data-readout text-[10px] text-amber-score/70">{m.pts}pt</span>
-              </div>
-            ))}
-            <div className="w-full h-px bg-cyan-glow/10 my-0.5" />
+              );
+            })}
+            <div className="w-full h-px bg-cyan-glow/10 my-1" />
             <div className="flex items-center justify-between">
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Max Total</span>
-              <span className="data-readout text-[11px] text-amber-score">265pt</span>
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Score</span>
+              <span className={`data-readout text-[13px] font-bold ${match.totalScore > 0 ? "text-amber-score" : "text-muted-foreground/50"}`}>
+                {match.totalScore}pt
+              </span>
             </div>
           </div>
         </HudPanel>
@@ -169,19 +303,6 @@ export default function Home() {
                 <KeyIndicator label="D" icon={<ArrowRight className="w-2.5 h-2.5" />} active={isKeyActive("d") || isKeyActive("arrowright")} />
               </div>
             </div>
-
-            <div className="w-px h-10 bg-cyan-glow/20" />
-
-            {/* Reset Button */}
-            <button
-              onClick={resetScene}
-              className="flex items-center gap-2 px-3 py-1.5 rounded bg-cyan-glow/10 border border-cyan-glow/30 
-                         text-cyan-glow text-xs font-medium tracking-wider uppercase
-                         hover:bg-cyan-glow/20 hover:border-cyan-glow/50 transition-all duration-200"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reset
-            </button>
 
             <div className="w-px h-10 bg-cyan-glow/20" />
 
