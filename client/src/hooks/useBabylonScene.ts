@@ -122,6 +122,7 @@ export function useBabylonScene() {
       totalScore: 0,
       missions: [],
       recentEvents: [],
+      completedEvents: [],
     },
   });
 
@@ -148,6 +149,21 @@ export function useBabylonScene() {
   }, []);
 
   const startMatch = useCallback(() => {
+    // Reset robot to launch area before starting the match
+    const robotBody = robotBodyRef.current;
+    if (robotBody) {
+      const startX = -FIELD_WIDTH / 2 + 0.12;
+      const startZ = -(FIELD_DEPTH / 2 - 0.12);
+      robotBody.setTranslation(new RAPIER.Vector3(startX, ROBOT_HEIGHT / 2 + 0.005, startZ), true);
+      robotBody.setRotation(new RAPIER.Quaternion(0, 0, 0, 1), true);
+      robotBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
+      robotBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
+    }
+    // Reset mission objects to initial positions
+    resetMissionObjects(missionsRef.current);
+    // Reset and start scoring
+    scoringEngineRef.current.reset();
+    scoringEngineRef.current.initMissions(missionsRef.current);
     scoringEngineRef.current.start();
   }, []);
 

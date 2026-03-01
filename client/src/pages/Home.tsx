@@ -305,18 +305,22 @@ export default function Home() {
             </div>
           )}
 
-          {/* Score notifications — floating in bottom-right of canvas */}
-          {match.recentEvents.length > 0 && (
-            <div className="absolute bottom-16 right-4 z-30 flex flex-col gap-1.5 pointer-events-none">
-              {match.recentEvents.map((evt, i) => (
+          {/* Persistent scored missions list — top-right of canvas */}
+          {match.completedEvents.length > 0 && (
+            <div className="absolute top-2 right-2 z-30 flex flex-col gap-1 pointer-events-none max-h-[50%] overflow-y-auto">
+              <div className="flex items-center gap-1.5 px-2 py-1 mb-0.5">
+                <Trophy className="w-3 h-3 text-amber-score" />
+                <span className="data-readout text-[9px] text-amber-score font-bold uppercase tracking-wider">Scored</span>
+                <span className="data-readout text-[10px] text-amber-score font-bold">{match.totalScore}pt</span>
+              </div>
+              {match.completedEvents.map((evt, i) => (
                 <div
                   key={`${evt.missionId}-${evt.timestamp}-${i}`}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-400/40 backdrop-blur-sm
-                             animate-in slide-in-from-right-5 fade-in duration-300"
+                  className="flex items-center gap-2 px-2.5 py-1 rounded bg-green-500/15 border border-green-400/30 backdrop-blur-sm"
                 >
-                  <span className="data-readout text-[10px] font-bold text-green-400">{evt.missionId}</span>
-                  <span className="text-[9px] text-green-300/80 truncate max-w-[160px]">{evt.description}</span>
-                  <span className="data-readout text-[11px] font-bold text-amber-score">+{evt.points}</span>
+                  <span className="data-readout text-[9px] font-bold text-green-400 flex-shrink-0">{evt.missionId}</span>
+                  <span className="text-[8px] text-green-300/70 truncate max-w-[140px]">{evt.description}</span>
+                  <span className="data-readout text-[9px] font-bold text-amber-score flex-shrink-0">+{evt.points}</span>
                 </div>
               ))}
             </div>

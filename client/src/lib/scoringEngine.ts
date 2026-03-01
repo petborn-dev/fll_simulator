@@ -56,7 +56,8 @@ export interface MatchState {
   timeRemaining: number;
   totalScore: number;
   missions: MissionScoreState[];
-  recentEvents: ScoreEvent[];
+  recentEvents: ScoreEvent[];  // kept for backwards compat
+  completedEvents: ScoreEvent[];  // persistent list of all scored conditions
 }
 
 // ─── Helper Functions ──────────────────────────────────────────────
@@ -540,6 +541,7 @@ export class ScoringEngine {
   private scoringGraceFrames: number = 0;
   private static readonly GRACE_FRAMES = 30; // ~0.5 seconds at 60fps
   private recentEvents: ScoreEvent[] = [];
+  private completedEvents: ScoreEvent[] = [];
   private static readonly MAX_EVENTS = 8;
 
   constructor() {
@@ -611,6 +613,7 @@ export class ScoringEngine {
     this.timeRemaining = MATCH_DURATION_SECONDS;
     this.lastTickTime = 0;
     this.recentEvents = [];
+    this.completedEvents = [];
     Array.from(this.missionScores.values()).forEach((ms) => {
       ms.earnedPoints = 0;
       ms.conditions.forEach((c) => {
@@ -645,7 +648,7 @@ export class ScoringEngine {
       return;
     }
 
-    // Clean up old events (older than 4 seconds)
+    // Clean up old recent events (older than 4 seconds) — for transient notifications
     const eventCutoff = now - 4000;
     this.recentEvents = this.recentEvents.filter((e) => e.timestamp > eventCutoff);
 
@@ -670,12 +673,14 @@ export class ScoringEngine {
             scoreState.conditions[i].completed = true;
             scoreState.earnedPoints += rules[i].points;
             // Add score event for UI notification
-            this.recentEvents.push({
+            const evt: ScoreEvent = {
               missionId: mission.id,
               description: rules[i].description,
               points: rules[i].points,
               timestamp: now,
-            });
+            };
+            this.recentEvents.push(evt);
+            this.completedEvents.push(evt);
             if (this.recentEvents.length > ScoringEngine.MAX_EVENTS) {
               this.recentEvents.shift();
             }
@@ -704,6 +709,7 @@ export class ScoringEngine {
       totalScore,
       missions: missionStates,
       recentEvents: [...this.recentEvents],
+      completedEvents: [...this.completedEvents],
     };
   }
 
