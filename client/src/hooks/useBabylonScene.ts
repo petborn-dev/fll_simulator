@@ -194,7 +194,7 @@ export function useBabylonScene() {
         "camera",
         -Math.PI / 2,
         Math.PI / 7,
-        1.5,
+        2.0,
         new Vector3(0, 0.0, 0.0),
         scene
       );
