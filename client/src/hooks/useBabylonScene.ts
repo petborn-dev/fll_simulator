@@ -193,9 +193,9 @@ export function useBabylonScene() {
       const camera = new ArcRotateCamera(
         "camera",
         -Math.PI / 2,
-        Math.PI / 6,
-        1.4,
-        new Vector3(-0.25, 0.0, 0.0),
+        Math.PI / 7,
+        1.5,
+        new Vector3(0, 0.0, 0.0),
         scene
       );
       camera.lowerRadiusLimit = 0.5;
@@ -337,10 +337,8 @@ export function useBabylonScene() {
         // Tick scoring engine (checks conditions every frame)
         scoringEngineRef.current.tick(renderedMissions, world);
 
-        // Camera follows robot (smooth lerp)
-        camera.target.x += (pos.x - camera.target.x) * 0.08;
-        camera.target.y += (0.05 - camera.target.y) * 0.08;
-        camera.target.z += (pos.z - camera.target.z) * 0.08;
+        // Camera stays centered on the mat (no follow) so the full field is always visible
+        // Users can still orbit/zoom manually
 
         scene.render();
 
