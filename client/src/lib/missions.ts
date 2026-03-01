@@ -13,10 +13,12 @@
  * - Added hingeAnchorOffset for precise pivot placement
  * - More detailed multi-part mission models with trigger zones
  * 
- * Field coordinate system:
+ * Field coordinate system (matches screen orientation):
  *   X: left(-) to right(+), range: -1.181 to +1.181
- *   Z: back(-) to front(+), range: -0.5715 to +0.5715
+ *   Z: back(+) to front(-), range: +0.5715 (top of screen) to -0.5715 (bottom)
  *   Y: up, ground = 0
+ *   Front of field (launch areas) = -Z = bottom of screen
+ *   Back of field (far missions) = +Z = top of screen
  */
 
 export type MissionPartType = "static" | "dynamic" | "hinge" | "trigger";
@@ -61,13 +63,13 @@ const HD = FD / 2; // half depth = 0.5715
  * Missions are distributed across the field with HOME area in bottom-left.
  */
 export const SUBMERGED_MISSIONS: MissionDefinition[] = [
-  // === M01: Coral Nursery (upper-left area) ===
+  // === M01: Coral Nursery (back-left area, +Z) ===
   {
     id: "M01",
     name: "Coral Nursery",
     shortName: "Coral",
     description: "Hang the coral tree on its support and flip the coral buds up.",
-    position: { x: -0.75, z: -0.25 },
+    position: { x: -0.75, z: 0.25 },
     maxPoints: 50,
     parts: [
       // Base platform
@@ -121,13 +123,13 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M02: Shark (upper-left) ===
+  // === M02: Shark (back-left, +Z) ===
   {
     id: "M02",
     name: "Shark",
     shortName: "Shark",
     description: "Release the shark from its cave into the habitat.",
-    position: { x: -0.35, z: -0.30 },
+    position: { x: -0.35, z: 0.30 },
     maxPoints: 30,
     parts: [
       // Cave structure
@@ -166,13 +168,13 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M03: Coral Reef (upper-center) ===
+  // === M03: Coral Reef (back-center, +Z) ===
   {
     id: "M03",
     name: "Coral Reef",
     shortName: "Reef",
     description: "Flip the coral reef structure up without damaging nearby segments.",
-    position: { x: 0.10, z: -0.30 },
+    position: { x: 0.10, z: 0.30 },
     maxPoints: 35,
     parts: [
       // Reef base
@@ -228,7 +230,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M05: Angler Fish (mid-left) ===
+  // === M05: Angler Fish (mid-left, z=0) ===
   {
     id: "M05",
     name: "Angler Fish",
@@ -288,7 +290,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M06: Raise the Mast (mid-center) ===
+  // === M06: Raise the Mast (center, z=0) ===
   {
     id: "M06",
     name: "Raise the Mast",
@@ -352,13 +354,13 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M08: Artificial Habitat (mid-right) ===
+  // === M08: Artificial Habitat (mid-right, +Z) ===
   {
     id: "M08",
     name: "Artificial Habitat",
     shortName: "Habitat",
     description: "Rearrange habitat segments to create safe homes for sea creatures.",
-    position: { x: 0.55, z: -0.10 },
+    position: { x: 0.55, z: 0.10 },
     maxPoints: 40,
     parts: [
       // Base
@@ -433,13 +435,13 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M11: Sonar Discovery (lower-center) ===
+  // === M11: Sonar Discovery (front-center, -Z) ===
   {
     id: "M11",
     name: "Sonar Discovery",
     shortName: "Sonar",
     description: "Push the panels to reveal hidden whales.",
-    position: { x: 0.10, z: 0.20 },
+    position: { x: 0.10, z: -0.20 },
     maxPoints: 30,
     parts: [
       // Sonar base
@@ -495,13 +497,13 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     ],
   },
 
-  // === M13: Change Shipping Lanes (lower-right) ===
+  // === M13: Change Shipping Lanes (front-right, -Z) ===
   {
     id: "M13",
     name: "Change Shipping Lanes",
     shortName: "Ship",
     description: "Push the cargo ship from lane 1 to lane 2.",
-    position: { x: 0.55, z: 0.25 },
+    position: { x: 0.55, z: -0.25 },
     maxPoints: 20,
     parts: [
       // Lane markers

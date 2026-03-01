@@ -130,8 +130,9 @@ export function useBabylonScene() {
     if (!world || !robotBody) return;
 
     // Inside the Left Launch Area arc (front-left corner of field)
+    // Front of field = -Z (bottom of screen), Left = -X
     const startX = -FIELD_WIDTH / 2 + 0.12;
-    const startZ = FIELD_DEPTH / 2 - 0.12;
+    const startZ = -(FIELD_DEPTH / 2 - 0.12);
     robotBody.setTranslation(new RAPIER.Vector3(startX, ROBOT_HEIGHT / 2 + 0.005, startZ), true);
     robotBody.setRotation(new RAPIER.Quaternion(0, 0, 0, 1), true);
     robotBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
@@ -258,8 +259,10 @@ export function useBabylonScene() {
 
       const fieldDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.01, 0);
       const fieldBody = world.createRigidBody(fieldDesc);
+      // Physics collider covers mat + home areas on both sides
+      const HOME_EXT = 0.35;
       world.createCollider(
-        RAPIER.ColliderDesc.cuboid(FIELD_WIDTH / 2, 0.01, FIELD_DEPTH / 2).setFriction(0.8),
+        RAPIER.ColliderDesc.cuboid((FIELD_WIDTH + HOME_EXT * 2) / 2, 0.01, FIELD_DEPTH / 2).setFriction(0.8),
         fieldBody
       );
 
@@ -435,10 +438,10 @@ function createFieldMaterial(scene: Scene): StandardMaterial {
   const mat = new StandardMaterial("fieldMat", scene);
 
   // Load the official SUBMERGED field mat image as the texture
-  const tex = new Texture(FIELD_MAT_TEXTURE_URL, scene, false, true);
-  // The image is wider than tall (landscape), matching the field aspect ratio.
+  const tex = new Texture(FIELD_MAT_TEXTURE_URL, scene, false, false);
   // Babylon.js ground UV: U maps along X (width), V maps along Z (depth).
-  // The image top = negative Z (back of field), bottom = positive Z (front/home side).
+  // V=0 → +Z (top of screen), V=1 → -Z (bottom of screen).
+  // With invertY=false: image top (back of field) → +Z (top), image bottom (front/launch) → -Z (bottom).
   tex.uScale = 1;
   tex.vScale = 1;
 
@@ -453,11 +456,18 @@ function createWalls(scene: Scene, world: RAPIER.World, shadowGen: ShadowGenerat
   wallMat.diffuseColor = new Color3(0.2, 0.22, 0.28);
   wallMat.specularColor = new Color3(0.1, 0.1, 0.12);
 
+  // Home area extends 0.35m beyond the mat on each side
+  const HOME_WIDTH = 0.35;
+  const totalWidth = FIELD_WIDTH + HOME_WIDTH * 2;
   const walls = [
-    { name: "wallN", w: FIELD_WIDTH + WALL_THICKNESS * 2, d: WALL_THICKNESS, px: 0, pz: -FIELD_DEPTH / 2 - WALL_THICKNESS / 2 },
-    { name: "wallS", w: FIELD_WIDTH + WALL_THICKNESS * 2, d: WALL_THICKNESS, px: 0, pz: FIELD_DEPTH / 2 + WALL_THICKNESS / 2 },
-    { name: "wallE", w: WALL_THICKNESS, d: FIELD_DEPTH, px: FIELD_WIDTH / 2 + WALL_THICKNESS / 2, pz: 0 },
-    { name: "wallW", w: WALL_THICKNESS, d: FIELD_DEPTH, px: -FIELD_WIDTH / 2 - WALL_THICKNESS / 2, pz: 0 },
+    // Back wall (top of screen, +Z)
+    { name: "wallN", w: totalWidth + WALL_THICKNESS * 2, d: WALL_THICKNESS, px: 0, pz: FIELD_DEPTH / 2 + WALL_THICKNESS / 2 },
+    // Front wall (bottom of screen, -Z) — open for launch areas, but we still need containment
+    { name: "wallS", w: totalWidth + WALL_THICKNESS * 2, d: WALL_THICKNESS, px: 0, pz: -FIELD_DEPTH / 2 - WALL_THICKNESS / 2 },
+    // Right wall (beyond right home area)
+    { name: "wallE", w: WALL_THICKNESS, d: FIELD_DEPTH, px: FIELD_WIDTH / 2 + HOME_WIDTH + WALL_THICKNESS / 2, pz: 0 },
+    // Left wall (beyond left home area)
+    { name: "wallW", w: WALL_THICKNESS, d: FIELD_DEPTH, px: -FIELD_WIDTH / 2 - HOME_WIDTH - WALL_THICKNESS / 2, pz: 0 },
   ];
 
   walls.forEach(({ name, w, d, px, pz }) => {
@@ -479,10 +489,12 @@ function createWalls(scene: Scene, world: RAPIER.World, shadowGen: ShadowGenerat
 /**
  * Create visible overlays for Home Areas and Launch Areas.
  *
- * FIELD LAYOUT (top-down, front = high Z = where players stand):
+ * FIELD LAYOUT (top-down view, matching screen orientation):
  * - Field: 2.362m (W) x 1.143m (D)
- * - Two Home Areas: left strip and right strip along the front edge
- * - Two Launch Areas: quarter-circle arcs at front-left and front-right corners
+ * - Front of field (launch areas, player side) = -Z = BOTTOM of screen
+ * - Back of field (far missions) = +Z = TOP of screen
+ * - Two Home Areas: table extensions on left (-X) and right (+X) sides
+ * - Two Launch Areas: quarter-circle arcs at front-left and front-right corners (-Z side)
  *
  * Home area width: ~0.35m on each side
  * Launch area arc radius: ~0.30m (quarter circle, 90°)
@@ -507,35 +519,53 @@ function createLaunchAreaOverlay(scene: Scene) {
   launchMat.emissiveColor = new Color3(0.8, 0.15, 0.05);
   launchMat.alpha = 0.85;
 
-  // --- HOME AREA boundary lines (yellow) ---
-  // Left home area: vertical line from front wall to back wall at x = -halfW + homeWidth
+  // --- HOME AREA table extensions (white/beige surfaces beyond the mat) ---
+  const homeAreaMat = new StandardMaterial("homeAreaMat", scene);
+  homeAreaMat.diffuseColor = new Color3(0.92, 0.90, 0.85); // off-white/beige
+  homeAreaMat.specularColor = new Color3(0.1, 0.1, 0.1);
+
+  // Left home area surface
+  const leftHome = MeshBuilder.CreateGround("leftHomeArea", {
+    width: homeWidth, height: FIELD_DEPTH,
+  }, scene);
+  leftHome.material = homeAreaMat;
+  leftHome.position.set(-halfW - homeWidth / 2, 0.002, 0);
+  leftHome.receiveShadows = true;
+
+  // Right home area surface
+  const rightHome = MeshBuilder.CreateGround("rightHomeArea", {
+    width: homeWidth, height: FIELD_DEPTH,
+  }, scene);
+  rightHome.material = homeAreaMat;
+  rightHome.position.set(halfW + homeWidth / 2, 0.002, 0);
+  rightHome.receiveShadows = true;
+
+  // --- HOME AREA boundary lines (yellow) at the inner edge ---
   const leftHomeLine = MeshBuilder.CreateBox("homeLineL", {
     width: lineThick, height: lineHeight, depth: FIELD_DEPTH,
   }, scene);
   leftHomeLine.material = homeMat;
-  leftHomeLine.position.set(-halfW + homeWidth, lineHeight, 0);
+  leftHomeLine.position.set(-halfW, lineHeight, 0);
 
-  // Right home area: vertical line
   const rightHomeLine = MeshBuilder.CreateBox("homeLineR", {
     width: lineThick, height: lineHeight, depth: FIELD_DEPTH,
   }, scene);
   rightHomeLine.material = homeMat;
-  rightHomeLine.position.set(halfW - homeWidth, lineHeight, 0);
+  rightHomeLine.position.set(halfW, lineHeight, 0);
 
   // --- LAUNCH AREA arcs (red quarter circles) ---
-  // Left launch area: quarter circle at front-left corner (corner = -halfW, +halfD)
-  // Arc goes from the left wall (angle = 0) to the front wall (angle = PI/2)
-  createQuarterArc(scene, launchMat, -halfW, halfD, arcRadius, 0, Math.PI / 2, arcSegments, "launchArcL");
+  // Front of field = -halfD (bottom of screen)
+  // Left launch area: quarter circle at front-left corner (corner = -halfW, -halfD)
+  createQuarterArc(scene, launchMat, -halfW, -halfD, arcRadius, 0, Math.PI / 2, arcSegments, "launchArcL");
 
-  // Right launch area: quarter circle at front-right corner (corner = +halfW, +halfD)
-  // Arc goes from the front wall (angle = PI/2) to the right wall (angle = PI)
-  createQuarterArc(scene, launchMat, halfW, halfD, arcRadius, Math.PI / 2, Math.PI, arcSegments, "launchArcR");
+  // Right launch area: quarter circle at front-right corner (corner = +halfW, -halfD)
+  createQuarterArc(scene, launchMat, halfW, -halfD, arcRadius, Math.PI / 2, Math.PI, arcSegments, "launchArcR");
 
   // --- LABELS ---
-  createAreaLabel(scene, "LEFT HOME", -halfW + homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
-  createAreaLabel(scene, "RIGHT HOME", halfW - homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
-  createAreaLabel(scene, "LAUNCH", -halfW + arcRadius * 0.4, 0.08, halfD - arcRadius * 0.4, new Color3(0.8, 0.15, 0.05));
-  createAreaLabel(scene, "LAUNCH", halfW - arcRadius * 0.4, 0.08, halfD - arcRadius * 0.4, new Color3(0.8, 0.15, 0.05));
+  createAreaLabel(scene, "LEFT HOME", -halfW - homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
+  createAreaLabel(scene, "RIGHT HOME", halfW + homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
+  createAreaLabel(scene, "LAUNCH", -halfW + arcRadius * 0.4, 0.08, -(halfD - arcRadius * 0.4), new Color3(0.8, 0.15, 0.05));
+  createAreaLabel(scene, "LAUNCH", halfW - arcRadius * 0.4, 0.08, -(halfD - arcRadius * 0.4), new Color3(0.8, 0.15, 0.05));
 }
 
 /** Draw a quarter-circle arc as a series of small box segments */
@@ -551,9 +581,9 @@ function createQuarterArc(
     const a1 = startAngle + (endAngle - startAngle) * (i / segments);
     const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / segments);
     const x1 = cornerX + Math.cos(a1) * radius;
-    const z1 = cornerZ - Math.sin(a1) * radius;
+    const z1 = cornerZ + Math.sin(a1) * radius; // +sin to curve inward from front edge
     const x2 = cornerX + Math.cos(a2) * radius;
-    const z2 = cornerZ - Math.sin(a2) * radius;
+    const z2 = cornerZ + Math.sin(a2) * radius;
     const mx = (x1 + x2) / 2;
     const mz = (z1 + z2) / 2;
     const dx = x2 - x1;
@@ -720,8 +750,9 @@ function createRobot(
 
   // === PHYSICS BODY ===
   // Inside the Left Launch Area arc (front-left corner of field)
+  // Front of field = -Z (bottom of screen), Left = -X
   const startX = -FIELD_WIDTH / 2 + 0.12;
-  const startZ = FIELD_DEPTH / 2 - 0.12;
+  const startZ = -(FIELD_DEPTH / 2 - 0.12);
   const startY = ROBOT_HEIGHT / 2 + 0.005;
 
   const robotDesc = RAPIER.RigidBodyDesc.dynamic()
