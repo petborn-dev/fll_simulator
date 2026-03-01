@@ -311,12 +311,12 @@ function getHingeAxis(axis: "x" | "y" | "z"): RAPIER.Vector3 {
  */
 function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   const labelHeight = 0.22;
-  // High-resolution texture for crisp text (2x previous)
-  const texW = 1024;
-  const texH = 256;
-  // Larger plane in world space for readability
-  const planeW = 0.28;
-  const planeH = 0.07;
+  // Ultra-high-resolution texture for maximum crispness
+  const texW = 2048;
+  const texH = 512;
+  // Larger plane in world space for readability at distance
+  const planeW = 0.38;
+  const planeH = 0.095;
 
   const plane = MeshBuilder.CreatePlane(`label_${mission.id}`, {
     width: planeW,
@@ -326,7 +326,7 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   const mat = new StandardMaterial(`labelMat_${mission.id}`, scene);
   mat.diffuseColor = new Color3(0, 0, 0);
   mat.emissiveColor = new Color3(1, 1, 1);
-  mat.alpha = 0.95;
+  mat.alpha = 1.0;
   mat.backFaceCulling = false;
   mat.disableLighting = true;
   plane.material = mat;
@@ -334,20 +334,20 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   plane.position.set(mission.position.x, labelHeight, mission.position.z);
   plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
 
-  // Create high-res dynamic texture
+  // Create ultra-high-res dynamic texture
   const dynamicTexture = new DynamicTexture(
     `labelTex_${mission.id}`,
     { width: texW, height: texH },
     scene,
-    true // generateMipMaps for better quality at distance
+    true
   );
   dynamicTexture.hasAlpha = true;
   const ctx = dynamicTexture.getContext() as CanvasRenderingContext2D;
   ctx.clearRect(0, 0, texW, texH);
 
-  // Draw rounded background pill with strong contrast
-  const r = 40;
-  const pad = 16;
+  // Draw rounded background pill — fully opaque dark background
+  const r = 60;
+  const pad = 24;
   ctx.beginPath();
   ctx.moveTo(pad + r, pad);
   ctx.lineTo(texW - pad - r, pad);
@@ -359,33 +359,42 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   ctx.lineTo(pad, pad + r);
   ctx.quadraticCurveTo(pad, pad, pad + r, pad);
   ctx.closePath();
-  ctx.fillStyle = "rgba(0, 8, 16, 0.92)";
+  ctx.fillStyle = "rgba(0, 6, 12, 0.96)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(0, 212, 255, 0.8)";
-  ctx.lineWidth = 5;
+  // Bright cyan border
+  ctx.strokeStyle = "rgba(0, 230, 255, 0.9)";
+  ctx.lineWidth = 8;
   ctx.stroke();
 
-  // Draw mission ID — large, bold, bright cyan
-  ctx.font = "bold 88px 'Courier New', monospace";
-  ctx.fillStyle = "#00e5ff";
+  // Draw mission ID — extra large, bold, bright cyan with glow
+  ctx.shadowColor = "#00e5ff";
+  ctx.shadowBlur = 12;
+  ctx.font = "bold 180px 'Courier New', monospace";
+  ctx.fillStyle = "#00ffff";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(mission.id, pad + 32, texH / 2);
+  ctx.fillText(mission.id, pad + 48, texH / 2);
 
-  // Draw mission name — bold, bright white
+  // Draw mission name — large, bold, bright white with glow
   const idWidth = ctx.measureText(mission.id).width;
-  ctx.font = "bold 56px Arial, Helvetica, sans-serif";
+  ctx.shadowColor = "#ffffff";
+  ctx.shadowBlur = 8;
+  ctx.font = "bold 120px Arial, Helvetica, sans-serif";
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
-  const nameX = pad + 32 + idWidth + 24;
-  const maxNameW = texW - nameX - pad - 32;
+  const nameX = pad + 48 + idWidth + 40;
+  const maxNameW = texW - nameX - pad - 48;
   // Truncate name if too long
   let displayName = mission.name;
   while (ctx.measureText(displayName).width > maxNameW && displayName.length > 3) {
     displayName = displayName.slice(0, -1);
   }
   if (displayName !== mission.name) displayName += "\u2026";
-  ctx.fillText(displayName, nameX, texH / 2 + 4);
+  ctx.fillText(displayName, nameX, texH / 2 + 6);
+
+  // Reset shadow
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
 
   dynamicTexture.update();
   mat.diffuseTexture = dynamicTexture;
