@@ -193,9 +193,9 @@ export function useBabylonScene() {
       const camera = new ArcRotateCamera(
         "camera",
         -Math.PI / 2,
-        Math.PI / 4.5,
-        1.6,
-        new Vector3(0, 0.05, 0.0),
+        Math.PI / 6,
+        1.4,
+        new Vector3(-0.25, 0.0, 0.0),
         scene
       );
       camera.lowerRadiusLimit = 0.5;
@@ -339,7 +339,7 @@ export function useBabylonScene() {
 
         // Camera follows robot (smooth lerp)
         camera.target.x += (pos.x - camera.target.x) * 0.08;
-        camera.target.y += (0.15 - camera.target.y) * 0.08;
+        camera.target.y += (0.05 - camera.target.y) * 0.08;
         camera.target.z += (pos.z - camera.target.z) * 0.08;
 
         scene.render();
