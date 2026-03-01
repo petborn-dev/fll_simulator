@@ -445,35 +445,31 @@ function createWalls(scene: Scene, world: RAPIER.World, shadowGen: ShadowGenerat
 }
 
 /**
- * Create a subtle glowing boundary for the Left Launch Area
- * so the user can see where the robot should start.
- * The launch area on the SUBMERGED mat is approximately:
- *   - Left edge: ~5% from left mat edge
- *   - Right edge: ~22% from left mat edge
- *   - Top edge: ~60% from top mat edge (i.e., 40% from bottom)
- *   - Bottom edge: ~95% from top mat edge (i.e., 5% from bottom)
+ * Create a visible red boundary for the Left Launch Area.
+ * Sized to match the orange rectangle printed on the SUBMERGED field mat.
+ * The launch area on the mat is approximately 0.28m wide x 0.30m deep,
+ * positioned at the front-left of the field.
  */
 function createLaunchAreaOverlay(scene: Scene) {
-  // Approximate launch area dimensions from the field mat
-  // The orange rectangle on the mat: roughly 0.35m wide x 0.40m deep
-  const laWidth = 0.35;
-  const laDepth = 0.40;
+  // Dimensions matching the orange rectangle on the mat
+  const laWidth = 0.28;
+  const laDepth = 0.30;
   // Center position: left side of field, front portion
-  const laCenterX = -FIELD_WIDTH / 2 + 0.20;
-  const laCenterZ = FIELD_DEPTH / 2 - 0.22;
+  const laCenterX = -FIELD_WIDTH / 2 + 0.18;
+  const laCenterZ = FIELD_DEPTH / 2 - 0.18;
 
-  // Create 4 thin line segments to form the boundary
-  const lineHeight = 0.003; // just above the mat
-  const lineThickness = 0.004;
+  // Create 4 thin line segments to form the boundary — RED color
+  const lineHeight = 0.004;
+  const lineThickness = 0.005;
   const lineMat = new StandardMaterial("launchLineMat", scene);
-  lineMat.diffuseColor = new Color3(0.0, 1.0, 0.6);
-  lineMat.emissiveColor = new Color3(0.0, 0.5, 0.3);
-  lineMat.alpha = 0.6;
+  lineMat.diffuseColor = new Color3(1.0, 0.15, 0.1);
+  lineMat.emissiveColor = new Color3(0.8, 0.1, 0.05);
+  lineMat.alpha = 0.85;
 
   const edges = [
-    // Top edge (back of launch area)
+    // Back edge
     { w: laWidth, d: lineThickness, x: laCenterX, z: laCenterZ - laDepth / 2 },
-    // Bottom edge (front of launch area)
+    // Front edge
     { w: laWidth, d: lineThickness, x: laCenterX, z: laCenterZ + laDepth / 2 },
     // Left edge
     { w: lineThickness, d: laDepth, x: laCenterX - laWidth / 2, z: laCenterZ },
@@ -486,28 +482,28 @@ function createLaunchAreaOverlay(scene: Scene) {
       width: e.w, height: lineHeight, depth: e.d,
     }, scene);
     line.material = lineMat;
-    line.position.set(e.x, 0.003, e.z);
+    line.position.set(e.x, 0.004, e.z);
   });
 
-  // Add a "LAUNCH" label
-  const labelPlane = MeshBuilder.CreatePlane("launchLabel", { width: 0.12, height: 0.02 }, scene);
+  // Add a "LAUNCH AREA" label — RED text
+  const labelPlane = MeshBuilder.CreatePlane("launchLabel", { width: 0.10, height: 0.018 }, scene);
   const labelMat = new StandardMaterial("launchLabelMat", scene);
   const labelTex = new DynamicTexture("launchLabelTex", { width: 256, height: 48 }, scene, false);
   labelTex.hasAlpha = true;
   const ctx = labelTex.getContext() as CanvasRenderingContext2D;
   ctx.clearRect(0, 0, 256, 48);
-  ctx.font = "bold 20px monospace";
-  ctx.fillStyle = "#00ff99";
+  ctx.font = "bold 22px monospace";
+  ctx.fillStyle = "#ff3322";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("LAUNCH AREA", 128, 24);
   labelTex.update();
   labelMat.diffuseTexture = labelTex;
   labelMat.opacityTexture = labelTex;
-  labelMat.emissiveColor = new Color3(0.0, 0.5, 0.3);
+  labelMat.emissiveColor = new Color3(0.8, 0.1, 0.05);
   labelMat.backFaceCulling = false;
   labelPlane.material = labelMat;
-  labelPlane.position.set(laCenterX, 0.15, laCenterZ);
+  labelPlane.position.set(laCenterX, 0.12, laCenterZ);
   labelPlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
 }
 
