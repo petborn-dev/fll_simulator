@@ -29,6 +29,7 @@ import {
   DynamicTexture,
   Texture,
   TransformNode,
+  Mesh,
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { getSeasonMissions } from "@/lib/missions";
@@ -119,8 +120,9 @@ export function useBabylonScene() {
     const robotBody = robotBodyRef.current;
     if (!world || !robotBody) return;
 
-    const startX = -FIELD_WIDTH / 2 + 0.25;
-    const startZ = FIELD_DEPTH / 2 - 0.15;
+    // Center of the Left Launch Area on the field mat
+    const startX = -FIELD_WIDTH / 2 + 0.20;
+    const startZ = FIELD_DEPTH / 2 - 0.20;
     robotBody.setTranslation(new RAPIER.Vector3(startX, ROBOT_HEIGHT / 2 + 0.005, startZ), true);
     robotBody.setRotation(new RAPIER.Quaternion(0, 0, 0, 1), true);
     robotBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
@@ -236,6 +238,9 @@ export function useBabylonScene() {
         RAPIER.ColliderDesc.cuboid(FIELD_WIDTH / 2, 0.01, FIELD_DEPTH / 2).setFriction(0.8),
         fieldBody
       );
+
+      // === LAUNCH AREA BOUNDARY (visible overlay) ===
+      createLaunchAreaOverlay(scene);
 
       // === BORDER WALLS ===
       createWalls(scene, world, shadowGenerator);
@@ -439,6 +444,73 @@ function createWalls(scene: Scene, world: RAPIER.World, shadowGen: ShadowGenerat
   });
 }
 
+/**
+ * Create a subtle glowing boundary for the Left Launch Area
+ * so the user can see where the robot should start.
+ * The launch area on the SUBMERGED mat is approximately:
+ *   - Left edge: ~5% from left mat edge
+ *   - Right edge: ~22% from left mat edge
+ *   - Top edge: ~60% from top mat edge (i.e., 40% from bottom)
+ *   - Bottom edge: ~95% from top mat edge (i.e., 5% from bottom)
+ */
+function createLaunchAreaOverlay(scene: Scene) {
+  // Approximate launch area dimensions from the field mat
+  // The orange rectangle on the mat: roughly 0.35m wide x 0.40m deep
+  const laWidth = 0.35;
+  const laDepth = 0.40;
+  // Center position: left side of field, front portion
+  const laCenterX = -FIELD_WIDTH / 2 + 0.20;
+  const laCenterZ = FIELD_DEPTH / 2 - 0.22;
+
+  // Create 4 thin line segments to form the boundary
+  const lineHeight = 0.003; // just above the mat
+  const lineThickness = 0.004;
+  const lineMat = new StandardMaterial("launchLineMat", scene);
+  lineMat.diffuseColor = new Color3(0.0, 1.0, 0.6);
+  lineMat.emissiveColor = new Color3(0.0, 0.5, 0.3);
+  lineMat.alpha = 0.6;
+
+  const edges = [
+    // Top edge (back of launch area)
+    { w: laWidth, d: lineThickness, x: laCenterX, z: laCenterZ - laDepth / 2 },
+    // Bottom edge (front of launch area)
+    { w: laWidth, d: lineThickness, x: laCenterX, z: laCenterZ + laDepth / 2 },
+    // Left edge
+    { w: lineThickness, d: laDepth, x: laCenterX - laWidth / 2, z: laCenterZ },
+    // Right edge
+    { w: lineThickness, d: laDepth, x: laCenterX + laWidth / 2, z: laCenterZ },
+  ];
+
+  edges.forEach((e, i) => {
+    const line = MeshBuilder.CreateBox(`launchEdge${i}`, {
+      width: e.w, height: lineHeight, depth: e.d,
+    }, scene);
+    line.material = lineMat;
+    line.position.set(e.x, 0.003, e.z);
+  });
+
+  // Add a "LAUNCH" label
+  const labelPlane = MeshBuilder.CreatePlane("launchLabel", { width: 0.12, height: 0.02 }, scene);
+  const labelMat = new StandardMaterial("launchLabelMat", scene);
+  const labelTex = new DynamicTexture("launchLabelTex", { width: 256, height: 48 }, scene, false);
+  labelTex.hasAlpha = true;
+  const ctx = labelTex.getContext() as CanvasRenderingContext2D;
+  ctx.clearRect(0, 0, 256, 48);
+  ctx.font = "bold 20px monospace";
+  ctx.fillStyle = "#00ff99";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("LAUNCH AREA", 128, 24);
+  labelTex.update();
+  labelMat.diffuseTexture = labelTex;
+  labelMat.opacityTexture = labelTex;
+  labelMat.emissiveColor = new Color3(0.0, 0.5, 0.3);
+  labelMat.backFaceCulling = false;
+  labelPlane.material = labelMat;
+  labelPlane.position.set(laCenterX, 0.15, laCenterZ);
+  labelPlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+}
+
 function createRobot(
   scene: Scene,
   world: RAPIER.World,
@@ -563,8 +635,9 @@ function createRobot(
   });
 
   // === PHYSICS BODY ===
-  const startX = -FIELD_WIDTH / 2 + 0.25;
-  const startZ = FIELD_DEPTH / 2 - 0.15;
+  // Center of the Left Launch Area on the field mat
+  const startX = -FIELD_WIDTH / 2 + 0.20;
+  const startZ = FIELD_DEPTH / 2 - 0.20;
   const startY = ROBOT_HEIGHT / 2 + 0.005;
 
   const robotDesc = RAPIER.RigidBodyDesc.dynamic()
