@@ -129,9 +129,9 @@ export function useBabylonScene() {
     const robotBody = robotBodyRef.current;
     if (!world || !robotBody) return;
 
-    // Center of the Left Launch Area on the field mat
-    const startX = -FIELD_WIDTH / 2 + 0.20;
-    const startZ = FIELD_DEPTH / 2 - 0.20;
+    // Inside the Left Launch Area arc (front-left corner of field)
+    const startX = -FIELD_WIDTH / 2 + 0.12;
+    const startZ = FIELD_DEPTH / 2 - 0.12;
     robotBody.setTranslation(new RAPIER.Vector3(startX, ROBOT_HEIGHT / 2 + 0.005, startZ), true);
     robotBody.setRotation(new RAPIER.Quaternion(0, 0, 0, 1), true);
     robotBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
@@ -477,66 +477,122 @@ function createWalls(scene: Scene, world: RAPIER.World, shadowGen: ShadowGenerat
 }
 
 /**
- * Create a visible red boundary for the Left Launch Area.
- * Sized to match the orange rectangle printed on the SUBMERGED field mat.
- * The launch area on the mat is approximately 0.28m wide x 0.30m deep,
- * positioned at the front-left of the field.
+ * Create visible overlays for Home Areas and Launch Areas.
+ *
+ * FIELD LAYOUT (top-down, front = high Z = where players stand):
+ * - Field: 2.362m (W) x 1.143m (D)
+ * - Two Home Areas: left strip and right strip along the front edge
+ * - Two Launch Areas: quarter-circle arcs at front-left and front-right corners
+ *
+ * Home area width: ~0.35m on each side
+ * Launch area arc radius: ~0.30m (quarter circle, 90°)
  */
 function createLaunchAreaOverlay(scene: Scene) {
-  // Dimensions matching the orange rectangle on the mat
-  const laWidth = 0.28;
-  const laDepth = 0.30;
-  // Center position: left side of field, front portion
-  const laCenterX = -FIELD_WIDTH / 2 + 0.18;
-  const laCenterZ = FIELD_DEPTH / 2 - 0.18;
+  const halfW = FIELD_WIDTH / 2;
+  const halfD = FIELD_DEPTH / 2;
+  const homeWidth = 0.35; // width of home area strip on each side
+  const arcRadius = 0.30; // radius of the quarter-circle launch area
+  const lineHeight = 0.003;
+  const lineThick = 0.004;
+  const arcSegments = 24; // smoothness of the arc
 
-  // Create 4 thin line segments to form the boundary — RED color
-  const lineHeight = 0.004;
-  const lineThickness = 0.005;
-  const lineMat = new StandardMaterial("launchLineMat", scene);
-  lineMat.diffuseColor = new Color3(1.0, 0.15, 0.1);
-  lineMat.emissiveColor = new Color3(0.8, 0.1, 0.05);
-  lineMat.alpha = 0.85;
+  // Shared materials
+  const homeMat = new StandardMaterial("homeLineMat", scene);
+  homeMat.diffuseColor = new Color3(1.0, 0.85, 0.2);
+  homeMat.emissiveColor = new Color3(0.7, 0.6, 0.1);
+  homeMat.alpha = 0.7;
 
-  const edges = [
-    // Back edge
-    { w: laWidth, d: lineThickness, x: laCenterX, z: laCenterZ - laDepth / 2 },
-    // Front edge
-    { w: laWidth, d: lineThickness, x: laCenterX, z: laCenterZ + laDepth / 2 },
-    // Left edge
-    { w: lineThickness, d: laDepth, x: laCenterX - laWidth / 2, z: laCenterZ },
-    // Right edge
-    { w: lineThickness, d: laDepth, x: laCenterX + laWidth / 2, z: laCenterZ },
-  ];
+  const launchMat = new StandardMaterial("launchArcMat", scene);
+  launchMat.diffuseColor = new Color3(1.0, 0.3, 0.1);
+  launchMat.emissiveColor = new Color3(0.8, 0.15, 0.05);
+  launchMat.alpha = 0.85;
 
-  edges.forEach((e, i) => {
-    const line = MeshBuilder.CreateBox(`launchEdge${i}`, {
-      width: e.w, height: lineHeight, depth: e.d,
+  // --- HOME AREA boundary lines (yellow) ---
+  // Left home area: vertical line from front wall to back wall at x = -halfW + homeWidth
+  const leftHomeLine = MeshBuilder.CreateBox("homeLineL", {
+    width: lineThick, height: lineHeight, depth: FIELD_DEPTH,
+  }, scene);
+  leftHomeLine.material = homeMat;
+  leftHomeLine.position.set(-halfW + homeWidth, lineHeight, 0);
+
+  // Right home area: vertical line
+  const rightHomeLine = MeshBuilder.CreateBox("homeLineR", {
+    width: lineThick, height: lineHeight, depth: FIELD_DEPTH,
+  }, scene);
+  rightHomeLine.material = homeMat;
+  rightHomeLine.position.set(halfW - homeWidth, lineHeight, 0);
+
+  // --- LAUNCH AREA arcs (red quarter circles) ---
+  // Left launch area: quarter circle at front-left corner (corner = -halfW, +halfD)
+  // Arc goes from the left wall (angle = 0) to the front wall (angle = PI/2)
+  createQuarterArc(scene, launchMat, -halfW, halfD, arcRadius, 0, Math.PI / 2, arcSegments, "launchArcL");
+
+  // Right launch area: quarter circle at front-right corner (corner = +halfW, +halfD)
+  // Arc goes from the front wall (angle = PI/2) to the right wall (angle = PI)
+  createQuarterArc(scene, launchMat, halfW, halfD, arcRadius, Math.PI / 2, Math.PI, arcSegments, "launchArcR");
+
+  // --- LABELS ---
+  createAreaLabel(scene, "LEFT HOME", -halfW + homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
+  createAreaLabel(scene, "RIGHT HOME", halfW - homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
+  createAreaLabel(scene, "LAUNCH", -halfW + arcRadius * 0.4, 0.08, halfD - arcRadius * 0.4, new Color3(0.8, 0.15, 0.05));
+  createAreaLabel(scene, "LAUNCH", halfW - arcRadius * 0.4, 0.08, halfD - arcRadius * 0.4, new Color3(0.8, 0.15, 0.05));
+}
+
+/** Draw a quarter-circle arc as a series of small box segments */
+function createQuarterArc(
+  scene: Scene, mat: StandardMaterial,
+  cornerX: number, cornerZ: number, radius: number,
+  startAngle: number, endAngle: number, segments: number, namePrefix: string
+) {
+  const segThick = 0.004;
+  const segHeight = 0.003;
+
+  for (let i = 0; i < segments; i++) {
+    const a1 = startAngle + (endAngle - startAngle) * (i / segments);
+    const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / segments);
+    const x1 = cornerX + Math.cos(a1) * radius;
+    const z1 = cornerZ - Math.sin(a1) * radius;
+    const x2 = cornerX + Math.cos(a2) * radius;
+    const z2 = cornerZ - Math.sin(a2) * radius;
+    const mx = (x1 + x2) / 2;
+    const mz = (z1 + z2) / 2;
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    const segLen = Math.sqrt(dx * dx + dz * dz) + 0.001;
+    const angle = Math.atan2(dx, dz);
+
+    const seg = MeshBuilder.CreateBox(`${namePrefix}_${i}`, {
+      width: segLen, height: segHeight, depth: segThick,
     }, scene);
-    line.material = lineMat;
-    line.position.set(e.x, 0.004, e.z);
-  });
+    seg.material = mat;
+    seg.position.set(mx, segHeight, mz);
+    seg.rotation.y = -angle;
+  }
+}
 
-  // Add a "LAUNCH AREA" label — RED text
-  const labelPlane = MeshBuilder.CreatePlane("launchLabel", { width: 0.10, height: 0.018 }, scene);
-  const labelMat = new StandardMaterial("launchLabelMat", scene);
-  const labelTex = new DynamicTexture("launchLabelTex", { width: 256, height: 48 }, scene, false);
-  labelTex.hasAlpha = true;
-  const ctx = labelTex.getContext() as CanvasRenderingContext2D;
+/** Create a floating billboard label for an area */
+function createAreaLabel(
+  scene: Scene, text: string, x: number, y: number, z: number, emissive: Color3
+) {
+  const plane = MeshBuilder.CreatePlane(`label_${text}`, { width: 0.12, height: 0.02 }, scene);
+  const mat = new StandardMaterial(`labelMat_${text}`, scene);
+  const tex = new DynamicTexture(`labelTex_${text}`, { width: 256, height: 48 }, scene, false);
+  tex.hasAlpha = true;
+  const ctx = tex.getContext() as CanvasRenderingContext2D;
   ctx.clearRect(0, 0, 256, 48);
   ctx.font = "bold 22px monospace";
-  ctx.fillStyle = "#ff3322";
+  ctx.fillStyle = `rgb(${Math.round(emissive.r * 255)},${Math.round(emissive.g * 255)},${Math.round(emissive.b * 255)})`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("LAUNCH AREA", 128, 24);
-  labelTex.update();
-  labelMat.diffuseTexture = labelTex;
-  labelMat.opacityTexture = labelTex;
-  labelMat.emissiveColor = new Color3(0.8, 0.1, 0.05);
-  labelMat.backFaceCulling = false;
-  labelPlane.material = labelMat;
-  labelPlane.position.set(laCenterX, 0.12, laCenterZ);
-  labelPlane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+  ctx.fillText(text, 128, 24);
+  tex.update();
+  mat.diffuseTexture = tex;
+  mat.opacityTexture = tex;
+  mat.emissiveColor = emissive;
+  mat.backFaceCulling = false;
+  plane.material = mat;
+  plane.position.set(x, y, z);
+  plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
 }
 
 function createRobot(
@@ -663,9 +719,9 @@ function createRobot(
   });
 
   // === PHYSICS BODY ===
-  // Center of the Left Launch Area on the field mat
-  const startX = -FIELD_WIDTH / 2 + 0.20;
-  const startZ = FIELD_DEPTH / 2 - 0.20;
+  // Inside the Left Launch Area arc (front-left corner of field)
+  const startX = -FIELD_WIDTH / 2 + 0.12;
+  const startZ = FIELD_DEPTH / 2 - 0.12;
   const startY = ROBOT_HEIGHT / 2 + 0.005;
 
   const robotDesc = RAPIER.RigidBodyDesc.dynamic()
