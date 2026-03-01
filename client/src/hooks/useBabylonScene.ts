@@ -193,9 +193,9 @@ export function useBabylonScene() {
       const camera = new ArcRotateCamera(
         "camera",
         -Math.PI / 2,
-        Math.PI / 3.8,
-        2.0,
-        new Vector3(0, 0.1, 0.05),
+        Math.PI / 4.5,
+        1.6,
+        new Vector3(0, 0.05, 0.0),
         scene
       );
       camera.lowerRadiusLimit = 0.5;

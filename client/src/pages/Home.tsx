@@ -11,30 +11,19 @@ import { ScoringEngine } from "@/lib/scoringEngine";
 import { getSeasonMissions } from "@/lib/missions";
 import {
   RotateCcw, Compass, Box, Anchor, Target, Play, Square, Timer, Trophy,
-  CheckCircle2, Circle, PanelRightClose, PanelRightOpen,
+  CheckCircle2, Circle,
   PanelLeftClose, PanelLeftOpen,
-  ChevronDown, ChevronRight, Gauge, Info, Lightbulb, MapPin,
+  ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin,
 } from "lucide-react";
 
 export default function Home() {
   const { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch } = useBabylonScene();
-  const [rightOpen, setRightOpen] = useState(true);
   const [leftOpen, setLeftOpen] = useState(true);
-  const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set());
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set(["M01"])); // First mission expanded by default
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
 
   // Get static mission definitions for the hints panel
   const missionDefs = useMemo(() => getSeasonMissions(), []);
-
-  const toggleMission = (id: string) => {
-    setExpandedMissions((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const toggleHint = (id: string) => {
     setExpandedHints((prev) => {
@@ -148,13 +137,6 @@ export default function Home() {
           <span className="data-readout text-[11px] font-bold text-cyan-glow">{sceneState.fps}</span>
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Physics</span>
           <span className="data-readout text-[11px] font-bold text-amber-score">{sceneState.physicsStep}</span>
-          <button
-            onClick={() => setRightOpen(!rightOpen)}
-            className="p-1 rounded text-muted-foreground hover:text-cyan-glow hover:bg-cyan-glow/10 transition-colors"
-            title={rightOpen ? "Hide scoring" : "Show scoring"}
-          >
-            {rightOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-          </button>
         </div>
       </div>
 
@@ -341,117 +323,6 @@ export default function Home() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* ── RIGHT PANEL: Live Scoring ── */}
-        <div
-          className={`${rightOpen ? "w-[240px]" : "w-0"} flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
-                      border-l border-hud-border/40 bg-background/95`}
-        >
-          <div className="w-[240px] h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-hud-border/30">
-              <div className="flex items-center gap-2">
-                <Target className="w-3.5 h-3.5 text-cyan-glow" />
-                <span className="data-readout text-[11px] text-cyan-glow font-bold tracking-wider uppercase">Scoring</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Trophy className="w-3 h-3 text-amber-score/60" />
-                <span className="data-readout text-[11px] font-bold text-amber-score">{match.totalScore}</span>
-              </div>
-            </div>
-
-            {/* Scrollable scoring list */}
-            <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1 scrollbar-thin">
-              {match.missions.map((m) => {
-                const allComplete = m.conditions.length > 0 && m.conditions.every((c) => c.completed);
-                const someComplete = m.conditions.some((c) => c.completed);
-                const isExpanded = expandedMissions.has(m.missionId);
-
-                return (
-                  <div key={m.missionId} className={`rounded transition-colors duration-200 ${
-                    allComplete ? "bg-green-400/8 border border-green-400/20" :
-                    someComplete ? "bg-amber-score/5 border border-amber-score/15" :
-                    "bg-white/[0.02] border border-hud-border/20"
-                  }`}>
-                    <button
-                      onClick={() => toggleMission(m.missionId)}
-                      className="w-full flex items-center justify-between gap-1 px-2 py-1.5 text-left hover:bg-white/[0.03] rounded transition-colors"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {allComplete ? (
-                          <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
-                        ) : someComplete ? (
-                          <Circle className="w-3 h-3 text-amber-score flex-shrink-0" />
-                        ) : (
-                          <Circle className="w-3 h-3 text-muted-foreground/30 flex-shrink-0" />
-                        )}
-                        <span className={`data-readout text-[10px] font-bold flex-shrink-0 ${allComplete ? "text-green-400" : "text-cyan-glow"}`}>
-                          {m.missionId}
-                        </span>
-                        <span className={`text-[9px] font-medium truncate ${allComplete ? "text-green-400/80" : "text-foreground/80"}`}>
-                          {m.missionName}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className={`data-readout text-[10px] font-bold ${m.earnedPoints > 0 ? "text-green-400" : "text-muted-foreground/30"}`}>
-                          {m.earnedPoints}
-                        </span>
-                        <span className="text-[8px] text-muted-foreground/30">/</span>
-                        <span className="data-readout text-[10px] text-amber-score/70">{m.maxPoints}</span>
-                        {isExpanded ? (
-                          <ChevronDown className="w-2.5 h-2.5 text-muted-foreground/40" />
-                        ) : (
-                          <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/40" />
-                        )}
-                      </div>
-                    </button>
-
-                    {isExpanded && m.conditions.length > 0 && (
-                      <div className="px-2 pb-1.5 ml-4 space-y-0.5 animate-in slide-in-from-top-1 duration-150">
-                        {m.conditions.map((c, ci) => (
-                          <div key={ci} className="flex flex-col gap-0.5">
-                            <div className="flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1 min-w-0">
-                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                                  c.completed ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.5)]" : "bg-muted-foreground/25"
-                                }`} />
-                                <span className={`text-[8px] font-medium truncate ${
-                                  c.completed ? "text-green-400 line-through opacity-70" : "text-foreground/70"
-                                }`}>
-                                  {c.description}
-                                </span>
-                              </div>
-                              <span className={`data-readout text-[8px] font-bold flex-shrink-0 ${
-                                c.completed ? "text-green-400" : "text-muted-foreground/30"
-                              }`}>
-                                {c.completed ? `+${c.points}` : c.points}
-                              </span>
-                            </div>
-                            {!c.completed && (
-                              <div className="ml-3">
-                                <span className="text-[7px] text-cyan-glow/50 italic leading-tight">
-                                  {c.hint}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-3 py-2 border-t border-hud-border/30">
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Total</span>
-              <span className={`data-readout text-[14px] font-bold ${match.totalScore > 0 ? "text-amber-score" : "text-muted-foreground/40"}`}>
-                {match.totalScore} pt
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
