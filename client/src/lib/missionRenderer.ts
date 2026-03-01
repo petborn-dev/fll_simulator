@@ -50,6 +50,9 @@ export interface RenderedMissionPart {
   rigidBody: RAPIER.RigidBody | null;
   joint: RAPIER.ImpulseJoint | null;
   definition: MissionPart;
+  /** Saved at creation time for reset */
+  initialPosition: { x: number; y: number; z: number };
+  initialRotation: { x: number; y: number; z: number; w: number };
 }
 
 export interface RenderedMission {
@@ -244,12 +247,22 @@ function renderPart(
     }
   }
 
+  // Save initial position/rotation for reset
+  const initPos = rigidBody
+    ? rigidBody.translation()
+    : { x: wx, y: wy, z: wz };
+  const initRot = rigidBody
+    ? rigidBody.rotation()
+    : { x: 0, y: 0, z: 0, w: 1 };
+
   return {
     id: part.id,
     mesh,
     rigidBody,
     joint,
     definition: part,
+    initialPosition: { x: initPos.x, y: initPos.y, z: initPos.z },
+    initialRotation: { x: initRot.x, y: initRot.y, z: initRot.z, w: initRot.w },
   };
 }
 
@@ -363,6 +376,44 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   rect.addControl(text);
 
   return anchor as unknown as Mesh;
+}
+
+/**
+ * Reset all mission objects back to their initial positions and states.
+ * Call this on match/scene reset.
+ */
+export function resetMissionObjects(missions: RenderedMission[]): void {
+  for (const mission of missions) {
+    for (const part of mission.parts) {
+      if (part.rigidBody && (part.definition.type === "dynamic" || part.definition.type === "hinge")) {
+        const ip = part.initialPosition;
+        const ir = part.initialRotation;
+        // Reset physics body position, rotation, and velocities
+        part.rigidBody.setTranslation(
+          new RAPIER.Vector3(ip.x, ip.y, ip.z),
+          true
+        );
+        part.rigidBody.setRotation(
+          new RAPIER.Quaternion(ir.x, ir.y, ir.z, ir.w),
+          true
+        );
+        part.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
+        part.rigidBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
+        // Wake the body so it settles properly
+        part.rigidBody.wakeUp();
+
+        // Also sync the mesh immediately
+        if (part.mesh instanceof Mesh) {
+          part.mesh.position.set(ip.x, ip.y, ip.z);
+          if (!part.mesh.rotationQuaternion) {
+            part.mesh.rotationQuaternion = new Quaternion(ir.x, ir.y, ir.z, ir.w);
+          } else {
+            part.mesh.rotationQuaternion.set(ir.x, ir.y, ir.z, ir.w);
+          }
+        }
+      }
+    }
+  }
 }
 
 /**

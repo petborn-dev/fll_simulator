@@ -33,7 +33,7 @@ import {
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { getSeasonMissions } from "@/lib/missions";
-import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, type RenderedMission } from "@/lib/missionRenderer";
+import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, resetMissionObjects, type RenderedMission } from "@/lib/missionRenderer";
 import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
 
 // FLL field dimensions in meters (real: 2362mm x 1143mm)
@@ -139,6 +139,10 @@ export function useBabylonScene() {
     robotBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
     robotBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
     physicsStepRef.current = 0;
+
+    // Reset all mission objects to their initial positions/rotations
+    resetMissionObjects(missionsRef.current);
+
     scoringEngineRef.current.reset();
     scoringEngineRef.current.initMissions(missionsRef.current);
   }, []);
