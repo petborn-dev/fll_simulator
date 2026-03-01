@@ -1,26 +1,43 @@
 /**
- * FLL 3D Simulator — Phase 4: Scoring System & Match Timer
- * Layout: Three rows — top bar (timer+info), middle (canvas + sidebar), bottom bar (telemetry+controls)
- * NO overlays on the 3D canvas — all HUD elements are outside the canvas area.
+ * FLL 3D Simulator — All 15 Missions + Dual Sidebar Layout
+ * Layout: Three rows — top bar (timer+info), middle (left hints + canvas + right scoring), bottom bar (telemetry)
+ * Left panel: Mission guide/hints (static reference)
+ * Right panel: Live scoring tracker
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useBabylonScene } from "@/hooks/useBabylonScene";
 import { ScoringEngine } from "@/lib/scoringEngine";
+import { getSeasonMissions } from "@/lib/missions";
 import {
-  RotateCcw, Compass, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  Box, Anchor, Target, Play, Square, Timer, Trophy,
+  RotateCcw, Compass, Box, Anchor, Target, Play, Square, Timer, Trophy,
   CheckCircle2, Circle, PanelRightClose, PanelRightOpen,
-  ChevronDown, ChevronRight, Gauge,
+  PanelLeftClose, PanelLeftOpen,
+  ChevronDown, ChevronRight, Gauge, Info, Lightbulb, MapPin,
 } from "lucide-react";
 
 export default function Home() {
   const { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch } = useBabylonScene();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+  const [leftOpen, setLeftOpen] = useState(true);
   const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set());
+  const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set(["M01"])); // First mission expanded by default
+  const [selectedMission, setSelectedMission] = useState<string | null>(null);
+
+  // Get static mission definitions for the hints panel
+  const missionDefs = useMemo(() => getSeasonMissions(), []);
 
   const toggleMission = (id: string) => {
     setExpandedMissions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleHint = (id: string) => {
+    setExpandedHints((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -40,6 +57,17 @@ export default function Home() {
       ? "text-amber-score"
       : "text-cyan-glow";
 
+  // Color coding for mission IDs in the hint panel
+  const getMissionColor = (id: string): string => {
+    const matchMission = match.missions.find((m) => m.missionId === id);
+    if (!matchMission) return "text-cyan-glow";
+    const allComplete = matchMission.conditions.length > 0 && matchMission.conditions.every((c) => c.completed);
+    const someComplete = matchMission.conditions.some((c) => c.completed);
+    if (allComplete) return "text-green-400";
+    if (someComplete) return "text-amber-score";
+    return "text-cyan-glow";
+  };
+
   return (
     <div className="flex flex-col w-screen h-screen overflow-hidden bg-background">
 
@@ -47,6 +75,13 @@ export default function Home() {
       <div className="flex-shrink-0 flex items-center justify-between px-3 py-1.5 border-b border-hud-border/40 bg-hud-bg/60">
         {/* Left: Title & Season */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setLeftOpen(!leftOpen)}
+            className="p-1 rounded text-muted-foreground hover:text-cyan-glow hover:bg-cyan-glow/10 transition-colors"
+            title={leftOpen ? "Hide guide" : "Show guide"}
+          >
+            {leftOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+          </button>
           <span className="data-readout text-[12px] text-cyan-glow font-bold tracking-wider">FLL 3D SIMULATOR</span>
           <div className="w-px h-4 bg-cyan-glow/20" />
           <div className="flex items-center gap-1.5">
@@ -114,18 +149,161 @@ export default function Home() {
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Physics</span>
           <span className="data-readout text-[11px] font-bold text-amber-score">{sceneState.physicsStep}</span>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setRightOpen(!rightOpen)}
             className="p-1 rounded text-muted-foreground hover:text-cyan-glow hover:bg-cyan-glow/10 transition-colors"
-            title={sidebarOpen ? "Hide missions" : "Show missions"}
+            title={rightOpen ? "Hide scoring" : "Show scoring"}
           >
-            {sidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+            {rightOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* ===== MIDDLE: Canvas + Sidebar ===== */}
+      {/* ===== MIDDLE: Left Hints + Canvas + Right Scoring ===== */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Canvas area — takes all remaining space */}
+
+        {/* ── LEFT PANEL: Mission Guide / Hints ── */}
+        <div
+          className={`${leftOpen ? "w-[240px]" : "w-0"} flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
+                      border-r border-hud-border/40 bg-background/95`}
+        >
+          <div className="w-[240px] h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-hud-border/30">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-score" />
+                <span className="data-readout text-[11px] text-amber-score font-bold tracking-wider uppercase">Mission Guide</span>
+              </div>
+              <span className="text-[8px] text-muted-foreground/50 uppercase tracking-wider">
+                {missionDefs.length} missions
+              </span>
+            </div>
+
+            {/* Scrollable mission hints list */}
+            <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1 scrollbar-thin">
+              {missionDefs.map((def) => {
+                const isExpanded = expandedHints.has(def.id);
+                const colorClass = getMissionColor(def.id);
+                const matchMission = match.missions.find((m) => m.missionId === def.id);
+                const allComplete = matchMission?.conditions.length
+                  ? matchMission.conditions.every((c) => c.completed)
+                  : false;
+
+                return (
+                  <div
+                    key={def.id}
+                    className={`rounded transition-colors duration-200 ${
+                      allComplete
+                        ? "bg-green-400/8 border border-green-400/20"
+                        : selectedMission === def.id
+                          ? "bg-cyan-glow/8 border border-cyan-glow/25"
+                          : "bg-white/[0.02] border border-hud-border/20 hover:border-hud-border/35"
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        toggleHint(def.id);
+                        setSelectedMission(def.id);
+                      }}
+                      className="w-full flex items-center justify-between gap-1 px-2 py-1.5 text-left rounded transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {allComplete ? (
+                          <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
+                        ) : (
+                          <MapPin className="w-3 h-3 text-cyan-glow/40 flex-shrink-0" />
+                        )}
+                        <span className={`data-readout text-[10px] font-bold flex-shrink-0 ${colorClass}`}>
+                          {def.id}
+                        </span>
+                        <span className={`text-[9px] font-medium truncate ${allComplete ? "text-green-400/80" : "text-foreground/80"}`}>
+                          {def.shortName}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className="data-readout text-[9px] text-amber-score/60">{def.maxPoints}pt</span>
+                        {isExpanded ? (
+                          <ChevronDown className="w-2.5 h-2.5 text-muted-foreground/40" />
+                        ) : (
+                          <ChevronRight className="w-2.5 h-2.5 text-muted-foreground/40" />
+                        )}
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="px-2.5 pb-2 animate-in slide-in-from-top-1 duration-150">
+                        {/* Mission description */}
+                        <p className="text-[8px] text-foreground/60 leading-relaxed mb-1.5 pl-1 border-l-2 border-cyan-glow/20 ml-1">
+                          {def.description}
+                        </p>
+
+                        {/* Scoring conditions as hints */}
+                        {matchMission && matchMission.conditions.length > 0 && (
+                          <div className="space-y-1 mt-1">
+                            {matchMission.conditions.map((c, ci) => (
+                              <div key={ci} className={`flex items-start gap-1.5 px-1.5 py-1 rounded ${
+                                c.completed
+                                  ? "bg-green-400/10"
+                                  : "bg-white/[0.02]"
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${
+                                  c.completed ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.5)]" : "bg-amber-score/30"
+                                }`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className={`text-[8px] font-medium ${
+                                      c.completed ? "text-green-400 line-through opacity-70" : "text-foreground/70"
+                                    }`}>
+                                      {c.description}
+                                    </span>
+                                    <span className={`data-readout text-[8px] font-bold flex-shrink-0 ${
+                                      c.completed ? "text-green-400" : "text-amber-score/50"
+                                    }`}>
+                                      {c.points}pt
+                                    </span>
+                                  </div>
+                                  {!c.completed && (
+                                    <span className="text-[7px] text-cyan-glow/40 italic leading-tight block mt-0.5">
+                                      {c.hint}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Parts list as quick reference */}
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {def.parts
+                            .filter((p) => p.type === "dynamic" || p.type === "hinge")
+                            .slice(0, 4)
+                            .map((p) => (
+                              <span
+                                key={p.id}
+                                className="text-[7px] px-1 py-0.5 rounded bg-cyan-glow/5 border border-cyan-glow/15 text-cyan-glow/60"
+                              >
+                                {p.label || p.id}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer: Quick stats */}
+            <div className="flex items-center justify-between px-3 py-2 border-t border-hud-border/30">
+              <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Max Score</span>
+              <span className="data-readout text-[12px] font-bold text-amber-score/70">
+                {missionDefs.reduce((sum, m) => sum + m.maxPoints, 0)} pt
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── CENTER: Canvas area ── */}
         <div className="relative flex-1 min-w-0">
           <canvas
             ref={canvasRef}
@@ -133,7 +311,7 @@ export default function Home() {
             touch-action="none"
           />
 
-          {/* Loading overlay — only overlay allowed */}
+          {/* Loading overlay */}
           {!sceneState.isReady && (
             <div className="absolute inset-0 flex items-center justify-center bg-background z-50">
               <div className="flex flex-col items-center gap-4">
@@ -165,22 +343,26 @@ export default function Home() {
           )}
         </div>
 
-        {/* Sidebar — scoring panel */}
+        {/* ── RIGHT PANEL: Live Scoring ── */}
         <div
-          className={`${sidebarOpen ? "w-[260px]" : "w-0"} flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
+          className={`${rightOpen ? "w-[240px]" : "w-0"} flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden
                       border-l border-hud-border/40 bg-background/95`}
         >
-          <div className="w-[260px] h-full flex flex-col">
-            {/* Sidebar header */}
+          <div className="w-[240px] h-full flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-hud-border/30">
               <div className="flex items-center gap-2">
                 <Target className="w-3.5 h-3.5 text-cyan-glow" />
-                <span className="data-readout text-[11px] text-cyan-glow font-bold tracking-wider uppercase">Missions</span>
+                <span className="data-readout text-[11px] text-cyan-glow font-bold tracking-wider uppercase">Scoring</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Trophy className="w-3 h-3 text-amber-score/60" />
+                <span className="data-readout text-[11px] font-bold text-amber-score">{match.totalScore}</span>
               </div>
             </div>
 
-            {/* Scrollable mission list */}
-            <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
+            {/* Scrollable scoring list */}
+            <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1 scrollbar-thin">
               {match.missions.map((m) => {
                 const allComplete = m.conditions.length > 0 && m.conditions.every((c) => c.completed);
                 const someComplete = m.conditions.some((c) => c.completed);
@@ -262,7 +444,7 @@ export default function Home() {
               })}
             </div>
 
-            {/* Sidebar footer */}
+            {/* Footer */}
             <div className="flex items-center justify-between px-3 py-2 border-t border-hud-border/30">
               <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">Total</span>
               <span className={`data-readout text-[14px] font-bold ${match.totalScore > 0 ? "text-amber-score" : "text-muted-foreground/40"}`}>

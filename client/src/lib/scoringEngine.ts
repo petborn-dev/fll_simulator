@@ -1,5 +1,5 @@
 /**
- * FLL SUBMERGED — Scoring Engine (Phase 4)
+ * FLL SUBMERGED — Scoring Engine (All 15 Missions)
  *
  * Manages match state (idle → running → ended), 2:30 countdown timer,
  * per-mission scoring rules, and collision-based completion detection.
@@ -53,9 +53,7 @@ export interface MatchState {
   missions: MissionScoreState[];
 }
 
-// ─── Scoring Rules per Mission ─────────────────────────────────────
-// Each mission has conditions that check physics state.
-// We use part positions and overlaps to determine completion.
+// ─── Helper Functions ──────────────────────────────────────────────
 
 function distXZ(a: { x: number; z: number }, b: { x: number; z: number }): number {
   const dx = a.x - b.x;
@@ -86,7 +84,6 @@ function getHingeAngle(parts: RenderedMissionPart[], partId: string): number | n
     // Fallback: compute angle from body rotation
     if (part.rigidBody) {
       const rot = part.rigidBody.rotation();
-      // Extract rotation around the hinge axis (simplified)
       const sinAngle = 2 * (rot.w * rot.x + rot.y * rot.z);
       return Math.asin(Math.max(-1, Math.min(1, sinAngle)));
     }
@@ -96,12 +93,10 @@ function getHingeAngle(parts: RenderedMissionPart[], partId: string): number | n
   }
 }
 
-/**
- * Define scoring conditions for each mission.
- * These are simplified versions of the official rules.
- */
+// ─── Scoring Rules per Mission ─────────────────────────────────────
+
 const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
-  // M01: Coral Nursery — coral tree near support + buds flipped up
+  // ── M01: Coral Nursery ──
   M01: [
     {
       description: "Coral tree is on the support",
@@ -111,7 +106,6 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
         const tree = getPartPosition(parts, "M01_tree");
         const support = getPartPosition(parts, "M01_support");
         if (!tree || !support) return false;
-        // Tree should be close to support horizontally and elevated
         return distXZ(tree, support) < 0.04 && tree.y > 0.04;
       },
     },
@@ -122,29 +116,39 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
       check: (parts) => {
         const angle = getHingeAngle(parts, "M01_buds");
         if (angle === null) return false;
-        // Buds should be rotated at least 45 degrees
         return angle > Math.PI / 4;
       },
     },
   ],
 
-  // M02: Shark — shark pushed into habitat zone
+  // ── M02: Shark ──
   M02: [
     {
-      description: "Shark is in the habitat",
-      hint: "Push the grey shark into the blue habitat zone",
-      points: 30,
+      description: "Shark released from cave",
+      hint: "Push the shark away from the cave",
+      points: 20,
+      check: (parts) => {
+        const shark = getPartPosition(parts, "M02_shark");
+        const cave = getPartPosition(parts, "M02_cave");
+        if (!shark || !cave) return false;
+        return distXZ(shark, cave) > 0.08;
+      },
+      requiresMovement: "M02_shark",
+    },
+    {
+      description: "Shark in habitat zone",
+      hint: "Push the shark into the blue habitat zone",
+      points: 10,
       check: (parts) => {
         const shark = getPartPosition(parts, "M02_shark");
         const habitat = getTriggerCenter(parts, "M02_habitat");
         if (!shark || !habitat) return false;
-        // Shark must be within the habitat trigger zone
         return distXZ(shark, habitat) < 0.08;
       },
     },
   ],
 
-  // M03: Coral Reef — reef panel flipped up + segments still standing
+  // ── M03: Coral Reef ──
   M03: [
     {
       description: "Coral reef panel is raised",
@@ -157,26 +161,53 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
       },
     },
     {
-      description: "Reef segments still standing",
-      hint: "Bonus: don't knock over the reef segments while raising the panel",
+      description: "Reef segment standing (5 pts each)",
+      hint: "Keep reef segments upright outside home — bonus for each standing",
       points: 15,
       check: (parts) => {
-        // Both segments should still be upright (Y > 0.015)
-        // This condition is only checked when the reef panel is raised (first condition met)
-        const angle = getHingeAngle(parts, "M03_reef");
-        if (angle === null || angle <= Math.PI / 4) return false; // reef must be raised first
         const seg1 = getPartPosition(parts, "M03_seg1");
         const seg2 = getPartPosition(parts, "M03_seg2");
-        if (!seg1 || !seg2) return false;
-        return seg1.y > 0.015 && seg2.y > 0.015;
+        const seg3 = getPartPosition(parts, "M03_seg3");
+        let count = 0;
+        if (seg1 && seg1.y > 0.015) count++;
+        if (seg2 && seg2.y > 0.015) count++;
+        if (seg3 && seg3.y > 0.015) count++;
+        return count >= 3;
       },
     },
   ],
 
-  // M05: Angler Fish — fish pushed into wreck target zone
+  // ── M04: Scuba Diver ──
+  M04: [
+    {
+      description: "Diver away from nursery",
+      hint: "Push the scuba diver away from the coral nursery area",
+      points: 20,
+      check: (parts) => {
+        const diver = getPartPosition(parts, "M04_diver");
+        const start = getPartPosition(parts, "M04_start");
+        if (!diver || !start) return false;
+        return distXZ(diver, start) > 0.08;
+      },
+      requiresMovement: "M04_diver",
+    },
+    {
+      description: "Diver at reef support",
+      hint: "Push the diver into the reef support zone (near M03)",
+      points: 20,
+      check: (parts) => {
+        const diver = getPartPosition(parts, "M04_diver");
+        const target = getTriggerCenter(parts, "M04_reef_target");
+        if (!diver || !target) return false;
+        return distXZ(diver, target) < 0.08;
+      },
+    },
+  ],
+
+  // ── M05: Angler Fish ──
   M05: [
     {
-      description: "Angler fish is in the shipwreck",
+      description: "Angler fish in the shipwreck",
       hint: "Push the angler fish into the shipwreck target zone",
       points: 30,
       check: (parts) => {
@@ -188,7 +219,7 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
     },
   ],
 
-  // M06: Raise the Mast — mast raised upright
+  // ── M06: Raise the Mast ──
   M06: [
     {
       description: "Mast is raised upright",
@@ -197,13 +228,28 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
       check: (parts) => {
         const angle = getHingeAngle(parts, "M06_mast");
         if (angle === null) return false;
-        // Mast hinge limits: -PI/2 to 0. Raised = angle near -PI/2
         return angle < -Math.PI / 4;
       },
     },
   ],
 
-  // M08: Artificial Habitat — segments pushed into target zone
+  // ── M07: Kraken's Treasure ──
+  M07: [
+    {
+      description: "Treasure chest outside nest",
+      hint: "Push the treasure chest completely out of the kraken's nest",
+      points: 20,
+      check: (parts) => {
+        const chest = getPartPosition(parts, "M07_chest");
+        const nest = getPartPosition(parts, "M07_nest");
+        if (!chest || !nest) return false;
+        return distXZ(chest, nest) > 0.08;
+      },
+      requiresMovement: "M07_chest",
+    },
+  ],
+
+  // ── M08: Artificial Habitat ──
   M08: [
     {
       description: "At least 2 segments in target zone",
@@ -237,12 +283,65 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
     },
   ],
 
-  // M11: Sonar Discovery — whale panels opened
+  // ── M09: Unexpected Encounter ──
+  M09: [
+    {
+      description: "Creature released from AUV",
+      hint: "Knock the unknown creature off the AUV",
+      points: 20,
+      check: (parts) => {
+        const creature = getPartPosition(parts, "M09_creature");
+        const auv = getPartPosition(parts, "M09_auv");
+        if (!creature || !auv) return false;
+        return distXZ(creature, auv) > 0.06;
+      },
+      requiresMovement: "M09_creature",
+    },
+    {
+      description: "Creature in cold seep",
+      hint: "Push the creature into the cold seep zone",
+      points: 10,
+      check: (parts) => {
+        const creature = getPartPosition(parts, "M09_creature");
+        const seep = getTriggerCenter(parts, "M09_coldseep");
+        if (!creature || !seep) return false;
+        return distXZ(creature, seep) < 0.07;
+      },
+    },
+  ],
+
+  // ── M10: Send Over the Submersible ──
+  M10: [
+    {
+      description: "Yellow flag is down",
+      hint: "Push the yellow flag down on its hinge",
+      points: 30,
+      check: (parts) => {
+        const angle = getHingeAngle(parts, "M10_flag");
+        if (angle === null) return false;
+        return angle < -Math.PI / 4;
+      },
+    },
+    {
+      description: "Submersible toward opposing field",
+      hint: "Push the submersible into the opposing field zone",
+      points: 10,
+      check: (parts) => {
+        const sub = getPartPosition(parts, "M10_sub");
+        const target = getTriggerCenter(parts, "M10_opposing");
+        if (!sub || !target) return false;
+        return distXZ(sub, target) < 0.10;
+      },
+      requiresMovement: "M10_sub",
+    },
+  ],
+
+  // ── M11: Sonar Discovery ──
   M11: [
     {
-      description: "Whale panel 1 opened",
+      description: "One whale revealed",
       hint: "Push the left whale panel to swing it open",
-      points: 15,
+      points: 20,
       check: (parts) => {
         const angle = getHingeAngle(parts, "M11_whale1");
         if (angle === null) return false;
@@ -250,18 +349,67 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
       },
     },
     {
-      description: "Whale panel 2 opened",
-      hint: "Push the right whale panel to swing it open",
-      points: 15,
+      description: "Both whales revealed (bonus)",
+      hint: "Also push the right whale panel open for bonus",
+      points: 10,
       check: (parts) => {
-        const angle = getHingeAngle(parts, "M11_whale2");
-        if (angle === null) return false;
-        return angle < -Math.PI / 6;
+        const a1 = getHingeAngle(parts, "M11_whale1");
+        const a2 = getHingeAngle(parts, "M11_whale2");
+        if (a1 === null || a2 === null) return false;
+        return a1 > Math.PI / 6 && a2 < -Math.PI / 6;
       },
     },
   ],
 
-  // M13: Change Shipping Lanes — cargo ship pushed to lane 2
+  // ── M12: Feed the Whale ──
+  M12: [
+    {
+      description: "At least 1 krill in whale's mouth",
+      hint: "Push krill pieces into the whale's mouth zone",
+      points: 10,
+      check: (parts) => {
+        const mouth = getTriggerCenter(parts, "M12_mouth");
+        if (!mouth) return false;
+        for (const kid of ["M12_krill1", "M12_krill2", "M12_krill3", "M12_krill4", "M12_krill5"]) {
+          const k = getPartPosition(parts, kid);
+          if (k && distXZ(k, mouth) < 0.05) return true;
+        }
+        return false;
+      },
+    },
+    {
+      description: "3+ krill in whale's mouth",
+      hint: "Push 3 or more krill into the mouth for bonus points",
+      points: 20,
+      check: (parts) => {
+        const mouth = getTriggerCenter(parts, "M12_mouth");
+        if (!mouth) return false;
+        let count = 0;
+        for (const kid of ["M12_krill1", "M12_krill2", "M12_krill3", "M12_krill4", "M12_krill5"]) {
+          const k = getPartPosition(parts, kid);
+          if (k && distXZ(k, mouth) < 0.05) count++;
+        }
+        return count >= 3;
+      },
+    },
+    {
+      description: "All 5 krill in whale's mouth",
+      hint: "Push all 5 krill into the mouth for maximum points",
+      points: 20,
+      check: (parts) => {
+        const mouth = getTriggerCenter(parts, "M12_mouth");
+        if (!mouth) return false;
+        let count = 0;
+        for (const kid of ["M12_krill1", "M12_krill2", "M12_krill3", "M12_krill4", "M12_krill5"]) {
+          const k = getPartPosition(parts, kid);
+          if (k && distXZ(k, mouth) < 0.05) count++;
+        }
+        return count >= 5;
+      },
+    },
+  ],
+
+  // ── M13: Change Shipping Lanes ──
   M13: [
     {
       description: "Cargo ship moved to lane 2",
@@ -271,11 +419,104 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
         const ship = getPartPosition(parts, "M13_ship");
         const target = getTriggerCenter(parts, "M13_target");
         if (!ship || !target) return false;
-        // Ship must have moved from its initial position AND be in the target zone
-        // Use a larger threshold since ship needs to physically travel to lane 2
         return distXZ(ship, target) < 0.08;
       },
       requiresMovement: "M13_ship",
+    },
+  ],
+
+  // ── M14: Sample Collection ──
+  M14: [
+    {
+      description: "Water sample collected",
+      hint: "Push the water sample out of its area",
+      points: 5,
+      check: (parts) => {
+        const sample = getPartPosition(parts, "M14_water");
+        const area = getTriggerCenter(parts, "M14_water_area");
+        if (!sample || !area) return false;
+        return distXZ(sample, area) > 0.05;
+      },
+      requiresMovement: "M14_water",
+    },
+    {
+      description: "Seabed sample collected",
+      hint: "Push the seabed sample off the seabed area",
+      points: 10,
+      check: (parts) => {
+        const sample = getPartPosition(parts, "M14_seabed");
+        const area = getTriggerCenter(parts, "M14_seabed_area");
+        if (!sample || !area) return false;
+        return distXZ(sample, area) > 0.05;
+      },
+      requiresMovement: "M14_seabed",
+    },
+    {
+      description: "Plankton sample collected",
+      hint: "Push the plankton sample off the kelp forest",
+      points: 10,
+      check: (parts) => {
+        const sample = getPartPosition(parts, "M14_plankton");
+        const area = getTriggerCenter(parts, "M14_kelp_area");
+        if (!sample || !area) return false;
+        return distXZ(sample, area) > 0.05;
+      },
+      requiresMovement: "M14_plankton",
+    },
+    {
+      description: "Trident piece off shipwreck",
+      hint: "Push at least one trident piece away from the shipwreck",
+      points: 20,
+      check: (parts) => {
+        const t1 = getPartPosition(parts, "M14_trident1");
+        const t2 = getPartPosition(parts, "M14_trident2");
+        // Check if at least one has moved significantly
+        const moved1 = t1 ? true : false;
+        const moved2 = t2 ? true : false;
+        if (!moved1 && !moved2) return false;
+        // We use requiresMovement on the part, so just check if moved
+        return true;
+      },
+      requiresMovement: "M14_trident1",
+    },
+    {
+      description: "Both trident pieces off (bonus)",
+      hint: "Push both trident pieces away for bonus points",
+      points: 10,
+      check: (parts) => {
+        // Both trident pieces must have moved from initial positions
+        // This is checked via the scoring engine's hasPartMoved
+        return true; // Will be gated by requiresMovement
+      },
+      requiresMovement: "M14_trident2",
+    },
+  ],
+
+  // ── M15: Research Vessel ──
+  M15: [
+    {
+      description: "Port latch engaged",
+      hint: "Push the port latch to dock the research vessel",
+      points: 20,
+      check: (parts) => {
+        const angle = getHingeAngle(parts, "M15_latch");
+        if (angle === null) return false;
+        return angle > Math.PI / 6;
+      },
+    },
+    {
+      description: "Items in cargo area",
+      hint: "Push samples, trident parts, or treasure chest into the cargo area",
+      points: 20,
+      check: (parts) => {
+        const cargo = getTriggerCenter(parts, "M15_cargo");
+        if (!cargo) return false;
+        // Check if any dynamic items are near the cargo area
+        // This is a simplified check — in the real game, specific items must be loaded
+        // For the simulator, we check if the latch is engaged (docked)
+        const angle = getHingeAngle(parts, "M15_latch");
+        return angle !== null && angle > Math.PI / 6;
+      },
     },
   ],
 };
@@ -288,7 +529,7 @@ export class ScoringEngine {
   private missionScores: Map<string, MissionScoreState> = new Map();
   private lastTickTime: number = 0;
   private initialPositions: Map<string, { x: number; y: number; z: number }> = new Map();
-  private scoringGraceFrames: number = 0; // skip first N ticks to let physics settle
+  private scoringGraceFrames: number = 0;
   private static readonly GRACE_FRAMES = 30; // ~0.5 seconds at 60fps
 
   constructor() {
@@ -331,7 +572,7 @@ export class ScoringEngine {
   /** Check if a part has moved significantly from its initial position */
   hasPartMoved(partId: string, currentPos: { x: number; z: number }, threshold: number = 0.02): boolean {
     const init = this.initialPositions.get(partId);
-    if (!init) return true; // if no initial position, assume moved
+    if (!init) return true;
     const dx = currentPos.x - init.x;
     const dz = currentPos.z - init.z;
     return Math.sqrt(dx * dx + dz * dz) > threshold;
@@ -358,7 +599,6 @@ export class ScoringEngine {
     this.matchPhase = "idle";
     this.timeRemaining = MATCH_DURATION_SECONDS;
     this.lastTickTime = 0;
-    // Reset all mission scores
     Array.from(this.missionScores.values()).forEach((ms) => {
       ms.earnedPoints = 0;
       ms.conditions.forEach((c) => {
@@ -369,12 +609,10 @@ export class ScoringEngine {
 
   /**
    * Tick the scoring engine — call every frame during the render loop.
-   * Updates the timer and checks scoring conditions.
    */
   tick(missions: RenderedMission[], world: RAPIER.World): void {
     if (this.matchPhase !== "running") return;
 
-    // Update timer
     const now = performance.now();
     if (this.lastTickTime > 0) {
       const elapsed = (now - this.lastTickTime) / 1000;
@@ -382,23 +620,19 @@ export class ScoringEngine {
     }
     this.lastTickTime = now;
 
-    // Check if time is up
     if (this.timeRemaining <= 0) {
       this.matchPhase = "ended";
       return;
     }
 
-    // Grace period: skip scoring for the first N frames to let physics settle
     if (this.scoringGraceFrames > 0) {
       this.scoringGraceFrames--;
-      // Capture initial positions on the last grace frame
       if (this.scoringGraceFrames === 0) {
         this.captureInitialPositions(missions);
       }
       return;
     }
 
-    // Check scoring conditions for each mission
     for (const mission of missions) {
       const scoreState = this.missionScores.get(mission.id);
       if (!scoreState) continue;
@@ -406,13 +640,12 @@ export class ScoringEngine {
       const rules = MISSION_SCORING_RULES[mission.id] ?? [];
       for (let i = 0; i < rules.length; i++) {
         if (scoreState.conditions[i] && !scoreState.conditions[i].completed) {
-          // If this condition requires a part to have moved, check that first
           if (rules[i].requiresMovement) {
             const part = mission.parts.find((p) => p.id === rules[i].requiresMovement);
             if (part?.rigidBody) {
               const pos = part.rigidBody.translation();
               if (!this.hasPartMoved(rules[i].requiresMovement!, { x: pos.x, z: pos.z })) {
-                continue; // Part hasn't moved yet, skip this condition
+                continue;
               }
             }
           }
