@@ -440,10 +440,11 @@ function createFieldMaterial(scene: Scene): StandardMaterial {
 
   // Load the official SUBMERGED field mat image as the texture
   const tex = new Texture(FIELD_MAT_TEXTURE_URL, scene, false, false);
-  // Rotate texture 180° so the front of the field (launch areas, "FIRST LEGO LEAGUE")
-  // appears at -Z (bottom of screen), and back of field at +Z (top of screen).
-  tex.wAng = Math.PI; // 180° rotation
-  tex.uScale = 1;
+  // Flip horizontally (uScale = -1) so text reads correctly:
+  // "FIRST LEGO LEAGUE CHALLENGE" on bottom-left, "SUBMERGED" on bottom-right.
+  // Rotate 180° (wAng) so launch areas face the camera (-Z = bottom of screen).
+  tex.wAng = Math.PI;
+  tex.uScale = -1;
   tex.vScale = 1;
 
   mat.diffuseTexture = tex;
