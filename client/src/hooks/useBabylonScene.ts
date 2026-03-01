@@ -439,9 +439,9 @@ function createFieldMaterial(scene: Scene): StandardMaterial {
 
   // Load the official SUBMERGED field mat image as the texture
   const tex = new Texture(FIELD_MAT_TEXTURE_URL, scene, false, false);
-  // Babylon.js ground UV: U maps along X (width), V maps along Z (depth).
-  // V=0 → +Z (top of screen), V=1 → -Z (bottom of screen).
-  // With invertY=false: image top (back of field) → +Z (top), image bottom (front/launch) → -Z (bottom).
+  // Rotate texture 180° so the front of the field (launch areas, "FIRST LEGO LEAGUE")
+  // appears at -Z (bottom of screen), and back of field at +Z (top of screen).
+  tex.wAng = Math.PI; // 180° rotation
   tex.uScale = 1;
   tex.vScale = 1;
 
@@ -503,21 +503,14 @@ function createLaunchAreaOverlay(scene: Scene) {
   const halfW = FIELD_WIDTH / 2;
   const halfD = FIELD_DEPTH / 2;
   const homeWidth = 0.35; // width of home area strip on each side
-  const arcRadius = 0.30; // radius of the quarter-circle launch area
   const lineHeight = 0.003;
   const lineThick = 0.004;
-  const arcSegments = 24; // smoothness of the arc
 
-  // Shared materials
+  // Home area boundary line material (yellow)
   const homeMat = new StandardMaterial("homeLineMat", scene);
   homeMat.diffuseColor = new Color3(1.0, 0.85, 0.2);
   homeMat.emissiveColor = new Color3(0.7, 0.6, 0.1);
   homeMat.alpha = 0.7;
-
-  const launchMat = new StandardMaterial("launchArcMat", scene);
-  launchMat.diffuseColor = new Color3(1.0, 0.3, 0.1);
-  launchMat.emissiveColor = new Color3(0.8, 0.15, 0.05);
-  launchMat.alpha = 0.85;
 
   // --- HOME AREA table extensions (white/beige surfaces beyond the mat) ---
   const homeAreaMat = new StandardMaterial("homeAreaMat", scene);
@@ -553,19 +546,11 @@ function createLaunchAreaOverlay(scene: Scene) {
   rightHomeLine.material = homeMat;
   rightHomeLine.position.set(halfW, lineHeight, 0);
 
-  // --- LAUNCH AREA arcs (red quarter circles) ---
-  // Front of field = -halfD (bottom of screen)
-  // Left launch area: quarter circle at front-left corner (corner = -halfW, -halfD)
-  createQuarterArc(scene, launchMat, -halfW, -halfD, arcRadius, 0, Math.PI / 2, arcSegments, "launchArcL");
+  // Launch area arcs are already printed on the mat texture, no overlay needed.
 
-  // Right launch area: quarter circle at front-right corner (corner = +halfW, -halfD)
-  createQuarterArc(scene, launchMat, halfW, -halfD, arcRadius, Math.PI / 2, Math.PI, arcSegments, "launchArcR");
-
-  // --- LABELS ---
+  // --- LABELS (home areas only) ---
   createAreaLabel(scene, "LEFT HOME", -halfW - homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
   createAreaLabel(scene, "RIGHT HOME", halfW + homeWidth / 2, 0.10, 0, new Color3(0.7, 0.6, 0.1));
-  createAreaLabel(scene, "LAUNCH", -halfW + arcRadius * 0.4, 0.08, -(halfD - arcRadius * 0.4), new Color3(0.8, 0.15, 0.05));
-  createAreaLabel(scene, "LAUNCH", halfW - arcRadius * 0.4, 0.08, -(halfD - arcRadius * 0.4), new Color3(0.8, 0.15, 0.05));
 }
 
 /** Draw a quarter-circle arc as a series of small box segments */
