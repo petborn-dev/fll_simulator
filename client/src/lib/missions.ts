@@ -65,7 +65,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Coral Nursery",
     shortName: "Coral",
     description: "Hang the coral tree on its support and flip the coral buds up.",
-    position: { x: -0.85, z: 0.25 },
+    position: { x: -0.95, z: 0.25 },
     maxPoints: 50,
     parts: [
       {
@@ -123,7 +123,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Shark",
     shortName: "Shark",
     description: "Release the shark from its cave into the habitat.",
-    position: { x: -0.40, z: 0.35 },
+    position: { x: -0.35, z: 0.4 },
     maxPoints: 30,
     parts: [
       {
@@ -167,7 +167,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Coral Reef",
     shortName: "Reef",
     description: "Flip the coral reef structure up without damaging nearby segments.",
-    position: { x: 0.45, z: 0.35 },
+    position: { x: 0.55, z: 0.4 },
     maxPoints: 40,
     parts: [
       {
@@ -240,7 +240,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Scuba Diver",
     shortName: "Diver",
     description: "Transport the scuba diver from the coral nursery to the coral reef support.",
-    position: { x: -0.70, z: 0.15 },
+    position: { x: -0.75, z: 0.1 },
     maxPoints: 40,
     parts: [
       // Diver figure (dynamic — small person-shaped, pushable)
@@ -287,7 +287,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Angler Fish",
     shortName: "Angler",
     description: "Push the angler fish into the shipwreck through the gate.",
-    position: { x: -0.30, z: 0.05 },
+    position: { x: -0.3, z: 0.05 },
     maxPoints: 30,
     parts: [
       {
@@ -345,7 +345,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Raise the Mast",
     shortName: "Mast",
     description: "Push the lever to raise the shipwreck's mast upright.",
-    position: { x: -0.10, z: 0.05 },
+    position: { x: -0.1, z: 0.05 },
     maxPoints: 30,
     parts: [
       {
@@ -407,7 +407,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Kraken's Treasure",
     shortName: "Kraken",
     description: "Retrieve the treasure chest from the kraken's nest.",
-    position: { x: -0.40, z: -0.10 },
+    position: { x: -0.4, z: -0.1 },
     maxPoints: 20,
     parts: [
       // Kraken's nest (static enclosure)
@@ -469,7 +469,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Artificial Habitat",
     shortName: "Habitat",
     description: "Rearrange habitat segments to create safe homes for sea creatures.",
-    position: { x: 0.70, z: 0.20 },
+    position: { x: 0.75, z: 0.2 },
     maxPoints: 40,
     parts: [
       {
@@ -549,7 +549,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Unexpected Encounter",
     shortName: "Creature",
     description: "Release the unknown creature from the AUV and deliver it to the cold seep.",
-    position: { x: 0.85, z: 0.05 },
+    position: { x: 0.8, z: 0.05 },
     maxPoints: 30,
     parts: [
       // AUV (Autonomous Underwater Vehicle) — static base
@@ -596,7 +596,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Send Over the Submersible",
     shortName: "Submersible",
     description: "Lower the yellow flag and send the submersible toward the opposing field.",
-    position: { x: -0.60, z: -0.15 },
+    position: { x: -0.55, z: -0.15 },
     maxPoints: 40,
     parts: [
       // Flag post (static)
@@ -658,7 +658,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Sonar Discovery",
     shortName: "Sonar",
     description: "Push the panels to reveal hidden whales.",
-    position: { x: 0.10, z: -0.15 },
+    position: { x: 0.1, z: -0.15 },
     maxPoints: 30,
     parts: [
       {
@@ -718,7 +718,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Feed the Whale",
     shortName: "Whale",
     description: "Collect krill and push them into the whale's mouth.",
-    position: { x: 0.65, z: -0.10 },
+    position: { x: 0.7, z: -0.1 },
     maxPoints: 50,
     parts: [
       // Whale body (static)
@@ -813,7 +813,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Change Shipping Lanes",
     shortName: "Ship",
     description: "Push the cargo ship from lane 1 to lane 2.",
-    position: { x: 0.45, z: -0.25 },
+    position: { x: 0.55, z: -0.3 },
     maxPoints: 20,
     parts: [
       {
@@ -866,7 +866,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Sample Collection",
     shortName: "Samples",
     description: "Collect water, seabed, and plankton samples plus trident pieces from around the field.",
-    position: { x: -0.10, z: -0.25 },
+    position: { x: -0.1, z: -0.3 },
     maxPoints: 55,
     parts: [
       // Water sample (dynamic — small blue cylinder)
@@ -975,7 +975,7 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     name: "Research Vessel",
     shortName: "Vessel",
     description: "Dock the research vessel and load collected samples, trident parts, and treasure chest.",
-    position: { x: 0.85, z: -0.25 },
+    position: { x: 0.85, z: -0.3 },
     maxPoints: 40,
     parts: [
       // Research vessel hull (static)

@@ -171,34 +171,34 @@ function renderPart(
     }
 
     case "dynamic": {
-      // Dynamic bodies: lower damping for more realistic sliding/toppling
+      // Dynamic bodies: low damping so robot can push them easily
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(wx, wy, wz)
-        .setLinearDamping(1.0)   // reduced from 2.0 for more realistic sliding
-        .setAngularDamping(1.0); // reduced from 2.0 for more realistic toppling
+        .setLinearDamping(0.5)   // low damping for easy pushing
+        .setAngularDamping(0.5); // low damping for easy toppling
       rigidBody = world.createRigidBody(bodyDesc);
       const colliderDesc = createColliderDesc(part);
       if (colliderDesc) {
-        colliderDesc.setMass(part.mass ?? 0.05);
-        colliderDesc.setFriction(part.friction ?? 0.5);
-        colliderDesc.setRestitution(part.restitution ?? 0.1);
+        colliderDesc.setMass(part.mass ?? 0.02);  // lighter default mass
+        colliderDesc.setFriction(part.friction ?? 0.3);  // lower friction
+        colliderDesc.setRestitution(part.restitution ?? 0.2);  // slightly bouncier
         world.createCollider(colliderDesc, rigidBody);
       }
       break;
     }
 
     case "hinge": {
-      // Hinge bodies: use per-part damping if specified
-      const angDamping = part.hingeDamping ?? 1.5;
+      // Hinge bodies: lower damping so robot can push/flip them
+      const angDamping = part.hingeDamping ?? 0.8;
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(wx, wy, wz)
-        .setLinearDamping(3.0)
+        .setLinearDamping(2.0)
         .setAngularDamping(angDamping);
       rigidBody = world.createRigidBody(bodyDesc);
       const colliderDesc = createColliderDesc(part);
       if (colliderDesc) {
-        colliderDesc.setMass(part.mass ?? 0.03);
-        colliderDesc.setFriction(part.friction ?? 0.5);
+        colliderDesc.setMass(part.mass ?? 0.015);  // lighter for easier flipping
+        colliderDesc.setFriction(part.friction ?? 0.3);
         world.createCollider(colliderDesc, rigidBody);
       }
 

@@ -121,6 +121,7 @@ export function useBabylonScene() {
       timeRemaining: MATCH_DURATION_SECONDS,
       totalScore: 0,
       missions: [],
+      recentEvents: [],
     },
   });
 

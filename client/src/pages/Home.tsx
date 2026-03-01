@@ -305,6 +305,23 @@ export default function Home() {
             </div>
           )}
 
+          {/* Score notifications — floating in bottom-right of canvas */}
+          {match.recentEvents.length > 0 && (
+            <div className="absolute bottom-16 right-4 z-30 flex flex-col gap-1.5 pointer-events-none">
+              {match.recentEvents.map((evt, i) => (
+                <div
+                  key={`${evt.missionId}-${evt.timestamp}-${i}`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-400/40 backdrop-blur-sm
+                             animate-in slide-in-from-right-5 fade-in duration-300"
+                >
+                  <span className="data-readout text-[10px] font-bold text-green-400">{evt.missionId}</span>
+                  <span className="text-[9px] text-green-300/80 truncate max-w-[160px]">{evt.description}</span>
+                  <span className="data-readout text-[11px] font-bold text-amber-score">+{evt.points}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Match ended overlay */}
           {isEnded && (
             <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
