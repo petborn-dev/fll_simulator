@@ -14,7 +14,7 @@ import {
   CheckCircle2, Circle,
   PanelLeftClose, PanelLeftOpen,
   ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin, Zap,
-  Hammer, KeyRound, Eye, Coins, HelpCircle, X, ExternalLink, Users,
+  Hammer, KeyRound, Eye, Coins, HelpCircle, X, ExternalLink, Users, Share2, Award,
 } from "lucide-react";
 
 export default function Home() {
@@ -24,6 +24,11 @@ export default function Home() {
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
+  const [bestScore, setBestScore] = useState<number>(() => {
+    const saved = localStorage.getItem("fll-sim-best-score");
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [showShareToast, setShowShareToast] = useState(false);
 
   // Visitor counter — increment once per session via counterapi.dev
   useEffect(() => {
@@ -65,6 +70,14 @@ export default function Home() {
   const formattedTime = ScoringEngine.formatTime(match.timeRemaining);
   const isRunning = match.phase === "running";
   const isEnded = match.phase === "ended";
+
+  // Update best score when match ends
+  useEffect(() => {
+    if (isEnded && match.totalScore > bestScore) {
+      setBestScore(match.totalScore);
+      localStorage.setItem("fll-sim-best-score", match.totalScore.toString());
+    }
+  }, [isEnded, match.totalScore, bestScore]);
 
   const timerColor = match.timeRemaining <= 10
     ? "text-red-400"
@@ -155,6 +168,12 @@ export default function Home() {
           <Trophy className="w-4 h-4 text-amber-score" />
           <span className="data-readout text-xl font-bold text-amber-score">{match.totalScore}</span>
           <span className="text-[10px] text-muted-foreground uppercase">pts</span>
+          {bestScore > 0 && (
+            <div className="flex items-center gap-1 ml-1" title="Personal best score">
+              <Award className="w-3 h-3 text-amber-score/50" />
+              <span className="data-readout text-[9px] text-amber-score/50">{bestScore}</span>
+            </div>
+          )}
           {/* Precision Tokens indicator */}
           <div className="w-px h-5 bg-cyan-glow/20" />
           <div className="flex items-center gap-1" title="Precision Tokens remaining">
@@ -283,6 +302,27 @@ export default function Home() {
                 <p className="text-[11px] text-muted-foreground">Max score: <span className="text-amber-score font-bold">605 pts</span> (555 missions + 50 precision tokens)</p>
               </div>
 
+              {/* Stats */}
+              {visitorCount !== null && (
+                <div className="flex items-center gap-3 px-3 py-2 rounded bg-hud-bg/40 border border-hud-border/20">
+                  <Users className="w-4 h-4 text-cyan-glow/60" />
+                  <div className="flex flex-col">
+                    <span className="data-readout text-lg text-cyan-glow font-bold">{visitorCount.toLocaleString()}</span>
+                    <span className="text-[10px] text-muted-foreground">total visitors</span>
+                  </div>
+                  {bestScore > 0 && (
+                    <>
+                      <div className="w-px h-8 bg-hud-border/20 mx-2" />
+                      <Award className="w-4 h-4 text-amber-score/60" />
+                      <div className="flex flex-col">
+                        <span className="data-readout text-lg text-amber-score font-bold">{bestScore}</span>
+                        <span className="text-[10px] text-muted-foreground">your best score</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Links */}
               <div className="flex items-center gap-3 pt-2 border-t border-hud-border/20">
                 <a
@@ -309,7 +349,29 @@ export default function Home() {
                 >
                   <ExternalLink className="w-3 h-3" /> GitHub
                 </a>
+                <button
+                  onClick={() => {
+                    const url = "https://petborn-dev.github.io/fll_simulator/";
+                    const text = `Check out this FLL SUBMERGED 3D Simulator!${bestScore > 0 ? ` My best score: ${bestScore} pts!` : ""}`;
+                    if (navigator.share) {
+                      navigator.share({ title: "FLL 3D Simulator", text, url }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(`${text} ${url}`).then(() => {
+                        setShowShareToast(true);
+                        setTimeout(() => setShowShareToast(false), 2000);
+                      }).catch(() => {});
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-[10px] text-cyan-glow/70 hover:text-cyan-glow transition-colors"
+                >
+                  <Share2 className="w-3 h-3" /> Share
+                </button>
               </div>
+              {showShareToast && (
+                <div className="text-[10px] text-green-400 text-center animate-in fade-in duration-200">
+                  Link copied to clipboard!
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -551,6 +613,14 @@ export default function Home() {
                 <Trophy className="w-10 h-10 text-amber-score mx-auto mb-3" />
                 <div className="text-xl font-bold text-amber-score data-readout mb-1">MATCH ENDED</div>
                 <div className="text-3xl font-bold text-cyan-glow data-readout mb-2">{match.totalScore} pts</div>
+                {match.totalScore >= bestScore && match.totalScore > 0 && (
+                  <div className="flex items-center justify-center gap-1.5 mb-2 animate-in fade-in zoom-in-95 duration-500">
+                    <Award className="w-4 h-4 text-amber-score" />
+                    <span className="data-readout text-[11px] text-amber-score font-bold uppercase tracking-wider">
+                      {match.totalScore > (bestScore > match.totalScore ? bestScore : 0) ? "New Personal Best!" : "Personal Best!"}
+                    </span>
+                  </div>
+                )}
                 {/* Precision Token Bonus Breakdown */}
                 <div className="flex items-center justify-center gap-2 mb-4">
                   <div className="flex items-center gap-1">
@@ -579,6 +649,25 @@ export default function Home() {
                              hover:bg-cyan-glow/20 hover:border-cyan-glow/50 transition-all duration-200"
                 >
                   <RotateCcw className="w-3.5 h-3.5" /> New Match
+                </button>
+                <button
+                  onClick={() => {
+                    const url = "https://petborn-dev.github.io/fll_simulator/";
+                    const text = `I scored ${match.totalScore} pts in the FLL SUBMERGED 3D Simulator!`;
+                    if (navigator.share) {
+                      navigator.share({ title: "FLL 3D Simulator", text, url }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(`${text} ${url}`).then(() => {
+                        setShowShareToast(true);
+                        setTimeout(() => setShowShareToast(false), 2000);
+                      }).catch(() => {});
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded bg-cyan-glow/10 border border-cyan-glow/30 
+                             text-cyan-glow text-xs font-medium tracking-wider uppercase mx-auto mt-2
+                             hover:bg-cyan-glow/20 hover:border-cyan-glow/50 transition-all duration-200"
+                >
+                  <Share2 className="w-3.5 h-3.5" /> Share Score
                 </button>
               </div>
             </div>
