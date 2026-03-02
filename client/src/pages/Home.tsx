@@ -13,7 +13,7 @@ import {
   RotateCcw, Compass, Box, Anchor, Target, Play, Square, Timer, Trophy,
   CheckCircle2, Circle,
   PanelLeftClose, PanelLeftOpen,
-  ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin,
+  ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin, Zap,
 } from "lucide-react";
 
 export default function Home() {
@@ -326,6 +326,26 @@ export default function Home() {
             </div>
           )}
 
+          {/* Press [E] interaction prompt — shown when near a Category B mission */}
+          {sceneState.nearestInteractable && isRunning && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-background/90 border border-cyan-glow/50 backdrop-blur-md shadow-[0_0_20px_rgba(0,200,255,0.15)]">
+                <div className="flex items-center justify-center w-7 h-7 rounded bg-cyan-glow/20 border border-cyan-glow/60">
+                  <span className="data-readout text-sm font-bold text-cyan-glow">E</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-medium text-foreground/90">
+                    {sceneState.nearestInteractable.missionName}
+                  </span>
+                  <span className="text-[9px] text-cyan-glow/70 data-readout">
+                    {sceneState.nearestInteractable.missionId} · Stage {sceneState.nearestInteractable.stagesCompleted + 1}/{sceneState.nearestInteractable.stagesTotal}
+                  </span>
+                </div>
+                <Zap className="w-3.5 h-3.5 text-amber-score animate-pulse" />
+              </div>
+            </div>
+          )}
+
           {/* Match ended overlay */}
           {isEnded && (
             <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
@@ -374,7 +394,7 @@ export default function Home() {
             </div>
           </div>
           <span className="text-[8px] text-muted-foreground/50 tracking-wider max-w-[100px] leading-tight">
-            WASD drive · Scroll zoom · Drag orbit
+            WASD drive · E interact · Scroll zoom · Drag orbit
           </span>
         </div>
 

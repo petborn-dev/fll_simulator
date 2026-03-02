@@ -50,6 +50,8 @@ export interface MissionPart {
   children?: CompoundChild[];
 }
 
+export type InteractionType = "push" | "trigger";
+
 export interface MissionDefinition {
   id: string;
   name: string;
@@ -58,6 +60,12 @@ export interface MissionDefinition {
   position: { x: number; z: number }; // field position
   parts: MissionPart[];
   maxPoints: number;
+  /** "push" = Category A (physics only), "trigger" = Category B (press E near mission) */
+  interactionType: InteractionType;
+  /** Radius in meters for Category B trigger detection (default 0.15) */
+  triggerRadius?: number;
+  /** Number of action stages for Category B missions */
+  stages?: number;
 }
 
 // Field dimensions for reference
@@ -82,6 +90,9 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     description: "Hang the coral tree on its support and flip the coral buds up.",
     position: { x: -0.9, z: -0.06 },
     maxPoints: 50,
+    interactionType: "trigger",
+    triggerRadius: 0.18,
+    stages: 2,
     parts: [
       {
         id: "M01_compound",
@@ -128,9 +139,10 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M02",
     name: "Shark",
     shortName: "Shark",
-    description: "Release the shark from its cave into the habitat.",
-    position: { x: -0.94, z: 0.43 },
+    description: "Push the shark out of its cave and into the habitat zone.",
+    position: { x: -0.55, z: 0.42 },
     maxPoints: 30,
+    interactionType: "push",
     parts: [
       {
         id: "M02_cave",
@@ -172,9 +184,10 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M03",
     name: "Coral Reef",
     shortName: "Reef",
-    description: "Flip the coral reef structure up without damaging nearby segments.",
-    position: { x: -0.35, z: 0.46 },
+    description: "Flip the coral reef segments upright and keep them standing.",
+    position: { x: 0.0, z: 0.42 },
     maxPoints: 40,
+    interactionType: "push",
     parts: [
       {
         id: "M03_compound",
@@ -216,9 +229,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M04",
     name: "Scuba Diver",
     shortName: "Diver",
-    description: "Transport the scuba diver from the coral nursery to the coral reef support.",
-    position: { x: -0.83, z: 0.17 },
+    description: "Deliver the scuba diver to the reef support zone.",
+    position: { x: -0.42, z: 0.22 },
     maxPoints: 40,
+    interactionType: "trigger",
+    triggerRadius: 0.15,
+    stages: 1,
     parts: [
       {
         id: "M04_diver",
@@ -260,9 +276,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M05",
     name: "Angler Fish",
     shortName: "Angler",
-    description: "Push the angler fish into the shipwreck through the gate.",
-    position: { x: 0.0, z: -0.06 },
+    description: "Latch the angler fish into the shipwreck.",
+    position: { x: -0.15, z: -0.06 },
     maxPoints: 30,
+    interactionType: "trigger",
+    triggerRadius: 0.15,
+    stages: 1,
     parts: [
       {
         id: "M05_wreck",
@@ -331,9 +350,10 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M06",
     name: "Raise the Mast",
     shortName: "Mast",
-    description: "Push the mast upright to raise the flag.",
-    position: { x: -0.55, z: 0.30 },
+    description: "Push the mast lever to raise it upright.",
+    position: { x: -0.55, z: 0.15 },
     maxPoints: 30,
+    interactionType: "push",
     parts: [
       {
         id: "M06_compound",
@@ -372,9 +392,10 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M07",
     name: "Kraken's Treasure",
     shortName: "Kraken",
-    description: "Retrieve the treasure chest from the kraken's nest.",
-    position: { x: -0.94, z: 0.20 },
+    description: "Push the treasure chest out of the kraken's nest.",
+    position: { x: -0.75, z: 0.22 },
     maxPoints: 30,
+    interactionType: "push",
     parts: [
       {
         id: "M07_compound",
@@ -422,9 +443,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M08",
     name: "Artificial Habitat",
     shortName: "Habitat",
-    description: "Stack the habitat segments to build the artificial reef.",
-    position: { x: -0.94, z: 0.10 },
+    description: "Stack the habitat segments in the target zone.",
+    position: { x: -0.75, z: 0.0 },
     maxPoints: 40,
+    interactionType: "trigger",
+    triggerRadius: 0.15,
+    stages: 2,
     parts: [
       {
         id: "M08_compound",
@@ -465,9 +489,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M09",
     name: "Unexpected Encounter",
     shortName: "Creature",
-    description: "Release the unknown creature from the AUV and deliver it to the cold seep.",
-    position: { x: 0.28, z: -0.11 },
+    description: "Release the unknown creature from the AUV to the cold seep.",
+    position: { x: 0.35, z: -0.06 },
     maxPoints: 30,
+    interactionType: "trigger",
+    triggerRadius: 0.15,
+    stages: 1,
     parts: [
       {
         id: "M09_auv",
@@ -512,11 +539,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
   // ═══════════════════════════════════════════════════════════════
   {
     id: "M10",
-    name: "Send Over the Submersible",
+    name: "Send Over Submersible",
     shortName: "Submersible",
-    description: "Lower the yellow flag and send the submersible toward the opposing field.",
-    position: { x: 0.12, z: 0.4 },
+    description: "Push the flag down and send the submersible toward the opposing field.",
+    position: { x: 0.45, z: 0.25 },
     maxPoints: 40,
+    interactionType: "push",
     parts: [
       {
         id: "M10_compound",
@@ -575,9 +603,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M11",
     name: "Sonar Discovery",
     shortName: "Sonar",
-    description: "Push the panels to reveal hidden whales.",
-    position: { x: 0.59, z: 0.4 },
+    description: "Flip the sonar panels to reveal the hidden whales.",
+    position: { x: 0.65, z: 0.30 },
     maxPoints: 30,
+    interactionType: "trigger",
+    triggerRadius: 0.15,
+    stages: 2,
     parts: [
       {
         id: "M11_compound",
@@ -620,9 +651,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M12",
     name: "Feed the Whale",
     shortName: "Whale",
-    description: "Collect krill and push them into the whale's mouth.",
-    position: { x: 0.94, z: 0.46 },
+    description: "Place krill into the whale's mouth.",
+    position: { x: 0.85, z: 0.42 },
     maxPoints: 50,
+    interactionType: "trigger",
+    triggerRadius: 0.18,
+    stages: 3,
     parts: [
       {
         id: "M12_compound",
@@ -705,9 +739,10 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M13",
     name: "Change Shipping Lanes",
     shortName: "Ship",
-    description: "Push the cargo ship from lane 1 to lane 2.",
-    position: { x: 0.9, z: 0.0 },
+    description: "Push the cargo ship into the lane 2 target zone.",
+    position: { x: 0.95, z: -0.06 },
     maxPoints: 20,
+    interactionType: "push",
     parts: [
       {
         id: "M13_lane1",
@@ -758,9 +793,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M14",
     name: "Sample Collection",
     shortName: "Samples",
-    description: "Collect water, seabed, and plankton samples plus trident pieces from around the field.",
-    position: { x: 0.94, z: 0.29 },
+    description: "Collect water, seabed, plankton samples and trident pieces.",
+    position: { x: 0.85, z: 0.35 },
     maxPoints: 55,
+    interactionType: "trigger",
+    triggerRadius: 0.18,
+    stages: 4,
     parts: [
       {
         id: "M14_water",
@@ -859,9 +897,12 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
     id: "M15",
     name: "Research Vessel",
     shortName: "Vessel",
-    description: "Dock the research vessel and load collected samples, trident parts, and treasure chest.",
-    position: { x: -0.35, z: -0.46 },
+    description: "Load cargo into the research vessel and latch the port.",
+    position: { x: -0.05, z: -0.30 },
     maxPoints: 40,
+    interactionType: "trigger",
+    triggerRadius: 0.18,
+    stages: 1,
     parts: [
       {
         id: "M15_hull",

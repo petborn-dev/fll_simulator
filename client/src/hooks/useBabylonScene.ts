@@ -32,7 +32,7 @@ import {
   Mesh,
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { getSeasonMissions } from "@/lib/missions";
+import { getSeasonMissions, type MissionDefinition } from "@/lib/missions";
 import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, resetMissionObjects, type RenderedMission } from "@/lib/missionRenderer";
 import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
 
@@ -65,6 +65,15 @@ interface RobotState {
   speed: number;
 }
 
+/** Info about the nearest interactable (Category B) mission within trigger range */
+export interface NearestInteractable {
+  missionId: string;
+  missionName: string;
+  distance: number;
+  stagesCompleted: number;
+  stagesTotal: number;
+}
+
 interface SceneState {
   fps: number;
   physicsStep: number;
@@ -74,6 +83,8 @@ interface SceneState {
   missionCount: number;
   season: string;
   match: MatchState;
+  /** Nearest Category B mission within trigger range, or null if none */
+  nearestInteractable: NearestInteractable | null;
 }
 
 // Pre-allocated temp vectors to avoid per-frame allocations
@@ -124,6 +135,7 @@ export function useBabylonScene() {
       recentEvents: [],
       completedEvents: [],
     },
+    nearestInteractable: null,
   });
 
   const resetScene = useCallback(() => {
@@ -315,7 +327,7 @@ export function useBabylonScene() {
       // === KEYBOARD INPUT ===
       onKeyDown = (e: KeyboardEvent) => {
         const key = e.key.toLowerCase();
-        if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "e"].includes(key)) {
           e.preventDefault();
           keysRef.current.add(key);
         }
@@ -371,6 +383,11 @@ export function useBabylonScene() {
           const vel = robotRigidBody.linvel();
           const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
 
+          // Proximity detection: find nearest Category B mission within trigger range
+          const nearestInteractable = findNearestInteractable(
+            pos, missionDefs, scoringEngineRef.current.getState()
+          );
+
           setSceneState({
             fps: Math.round(engine!.getFps()),
             physicsStep: physicsStepRef.current,
@@ -388,6 +405,7 @@ export function useBabylonScene() {
             missionCount: renderedMissions.length,
             season: "SUBMERGED 2024-25",
             match: scoringEngineRef.current.getState(),
+            nearestInteractable,
           });
         }
       });
@@ -827,4 +845,50 @@ function quaternionToHeadingDeg(q: { x: number; y: number; z: number; w: number 
   const cosy_cosp = 1 - 2 * (q.y * q.y + q.x * q.x);
   const heading = Math.atan2(siny_cosp, cosy_cosp);
   return ((heading * 180) / Math.PI + 360) % 360;
+}
+
+/**
+ * Find the nearest Category B (trigger) mission within its trigger radius.
+ * Returns null if no interactable mission is in range.
+ */
+function findNearestInteractable(
+  robotPos: { x: number; y: number; z: number },
+  missionDefs: MissionDefinition[],
+  matchState: MatchState
+): NearestInteractable | null {
+  let nearest: NearestInteractable | null = null;
+  let nearestDist = Infinity;
+
+  for (const def of missionDefs) {
+    // Only Category B missions are interactable
+    if (def.interactionType !== "trigger") continue;
+
+    const radius = def.triggerRadius ?? 0.15;
+    const dx = robotPos.x - def.position.x;
+    const dz = robotPos.z - def.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+
+    if (dist < radius && dist < nearestDist) {
+      // Count completed stages from match state
+      const matchMission = matchState.missions.find((m) => m.missionId === def.id);
+      const stagesCompleted = matchMission
+        ? matchMission.conditions.filter((c) => c.completed).length
+        : 0;
+      const stagesTotal = def.stages ?? 1;
+
+      // Don't show prompt if all stages are already completed
+      if (stagesCompleted >= stagesTotal) continue;
+
+      nearestDist = dist;
+      nearest = {
+        missionId: def.id,
+        missionName: def.name,
+        distance: +dist.toFixed(3),
+        stagesCompleted,
+        stagesTotal,
+      };
+    }
+  }
+
+  return nearest;
 }
