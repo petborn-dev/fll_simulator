@@ -129,6 +129,23 @@ export default function Home() {
           <Trophy className="w-4 h-4 text-amber-score" />
           <span className="data-readout text-xl font-bold text-amber-score">{match.totalScore}</span>
           <span className="text-[10px] text-muted-foreground uppercase">pts</span>
+          {/* Precision Tokens indicator */}
+          <div className="w-px h-5 bg-cyan-glow/20" />
+          <div className="flex items-center gap-1" title="Precision Tokens remaining">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full border transition-all duration-300 ${
+                  i < match.precisionTokensRemaining
+                    ? "bg-red-500 border-red-400 shadow-[0_0_4px_rgba(239,68,68,0.5)]"
+                    : "bg-transparent border-muted-foreground/30"
+                }`}
+              />
+            ))}
+            <span className="data-readout text-[9px] text-muted-foreground ml-0.5">
+              {match.precisionTokensRemaining}/6
+            </span>
+          </div>
         </div>
 
         {/* Right: FPS + Sidebar toggle */}
@@ -352,7 +369,28 @@ export default function Home() {
               <div className="bg-background/90 border border-hud-border rounded-lg px-8 py-6 text-center pointer-events-auto backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
                 <Trophy className="w-10 h-10 text-amber-score mx-auto mb-3" />
                 <div className="text-xl font-bold text-amber-score data-readout mb-1">MATCH ENDED</div>
-                <div className="text-3xl font-bold text-cyan-glow data-readout mb-4">{match.totalScore} pts</div>
+                <div className="text-3xl font-bold text-cyan-glow data-readout mb-2">{match.totalScore} pts</div>
+                {/* Precision Token Bonus Breakdown */}
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <div className="flex items-center gap-1">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <div
+                        key={i}
+                        className={`w-2.5 h-2.5 rounded-full border ${
+                          i < match.precisionTokensRemaining
+                            ? "bg-red-500 border-red-400"
+                            : "bg-transparent border-muted-foreground/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    Precision: {match.precisionTokensRemaining}/6 tokens
+                  </span>
+                  {match.precisionBonus > 0 && (
+                    <span className="text-[10px] text-green-400 font-bold">+{match.precisionBonus} pts</span>
+                  )}
+                </div>
                 <button
                   onClick={() => { resetScene(); resetMatch(); }}
                   className="flex items-center gap-2 px-4 py-2 rounded bg-cyan-glow/10 border border-cyan-glow/30 

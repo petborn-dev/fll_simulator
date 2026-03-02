@@ -135,6 +135,8 @@ export function useBabylonScene() {
       missions: [],
       recentEvents: [],
       completedEvents: [],
+      precisionTokensRemaining: 6,
+      precisionBonus: 0,
     },
     nearestInteractable: null,
   });

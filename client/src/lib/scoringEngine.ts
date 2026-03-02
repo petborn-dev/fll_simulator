@@ -13,7 +13,7 @@
 
 import type { RenderedMission, RenderedMissionPart } from "./missionRenderer";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { getSeasonMissions } from "./missions";
+import { getSeasonMissions, PRECISION_TOKEN_BONUS } from "./missions";
 
 // ─── Category B (trigger) mission IDs ─────────────────────────────
 // These missions are scored via E key (triggerMissionAction), NOT physics.
@@ -68,6 +68,8 @@ export interface MatchState {
   missions: MissionScoreState[];
   recentEvents: ScoreEvent[];  // kept for backwards compat
   completedEvents: ScoreEvent[];  // persistent list of all scored conditions
+  precisionTokensRemaining: number; // 0-6, updated at match end
+  precisionBonus: number; // bonus points from precision tokens
 }
 
 // ─── Helper Functions ──────────────────────────────────────────────
@@ -538,6 +540,18 @@ const MISSION_SCORING_RULES: Record<string, ScoringCondition[]> = {
       },
     },
   ],
+
+  // ── M16: Precision Tokens ──
+  // Scored at match end via processMatchEnd(), not per-frame.
+  // This rule exists so initMissions() creates a score state for M16.
+  M16: [
+    {
+      description: "Precision tokens remaining",
+      hint: "Keep all 6 tokens on the field — avoid robot interruptions outside home",
+      points: 50,
+      check: () => false, // Never auto-completes; handled by processMatchEnd()
+    },
+  ],
 };
 
 // ─── Scoring Engine Class ──────────────────────────────────────────
@@ -553,6 +567,9 @@ export class ScoringEngine {
   private recentEvents: ScoreEvent[] = [];
   private completedEvents: ScoreEvent[] = [];
   private static readonly MAX_EVENTS = 8;
+  private precisionTokensRemaining: number = 6;
+  private precisionBonus: number = 0;
+  private matchEndProcessed: boolean = false;
 
   constructor() {
     this.reset();
@@ -624,6 +641,9 @@ export class ScoringEngine {
     this.lastTickTime = 0;
     this.recentEvents = [];
     this.completedEvents = [];
+    this.precisionTokensRemaining = 6;
+    this.precisionBonus = 0;
+    this.matchEndProcessed = false;
     Array.from(this.missionScores.values()).forEach((ms) => {
       ms.earnedPoints = 0;
       ms.conditions.forEach((c) => {
@@ -647,6 +667,10 @@ export class ScoringEngine {
 
     if (this.timeRemaining <= 0) {
       this.matchPhase = "ended";
+      // Process end-of-match precision token bonus (once)
+      if (!this.matchEndProcessed) {
+        this.processMatchEnd(missions);
+      }
       return;
     }
 
@@ -721,10 +745,12 @@ export class ScoringEngine {
     return {
       phase: this.matchPhase,
       timeRemaining: this.timeRemaining,
-      totalScore,
+      totalScore: totalScore + (this.matchPhase === "ended" ? this.precisionBonus : 0),
       missions: missionStates,
       recentEvents: [...this.recentEvents],
       completedEvents: [...this.completedEvents],
+      precisionTokensRemaining: this.precisionTokensRemaining,
+      precisionBonus: this.precisionBonus,
     };
   }
 
@@ -763,6 +789,52 @@ export class ScoringEngine {
     }
 
     return null; // All conditions already completed
+  }
+
+  /**
+   * Process end-of-match scoring: count precision tokens remaining on field.
+   * A token is "on field" if its Y position is > -0.02 (hasn't fallen off).
+   */
+  private processMatchEnd(missions: RenderedMission[]): void {
+    this.matchEndProcessed = true;
+    const m16 = missions.find((m) => m.id === "M16");
+    if (!m16) {
+      this.precisionTokensRemaining = 6;
+    } else {
+      let onField = 0;
+      for (const part of m16.parts) {
+        if (part.rigidBody) {
+          const pos = part.rigidBody.translation();
+          // Token is on field if Y > -0.02 (hasn't fallen off the table)
+          if (pos.y > -0.02) onField++;
+        }
+      }
+      this.precisionTokensRemaining = onField;
+    }
+    this.precisionBonus = PRECISION_TOKEN_BONUS[this.precisionTokensRemaining] ?? 0;
+
+    // Update M16 score state
+    const m16Score = this.missionScores.get("M16");
+    if (m16Score) {
+      m16Score.earnedPoints = this.precisionBonus;
+      // Mark condition as completed
+      if (m16Score.conditions[0]) {
+        m16Score.conditions[0].completed = true;
+        m16Score.conditions[0].description = `${this.precisionTokensRemaining}/6 tokens remaining`;
+      }
+    }
+
+    // Fire score event for the precision bonus
+    if (this.precisionBonus > 0) {
+      const evt: ScoreEvent = {
+        missionId: "M16",
+        description: `Precision: ${this.precisionTokensRemaining}/6 tokens`,
+        points: this.precisionBonus,
+        timestamp: performance.now(),
+      };
+      this.recentEvents.push(evt);
+      this.completedEvents.push(evt);
+    }
   }
 
   /** Format time remaining as MM:SS */

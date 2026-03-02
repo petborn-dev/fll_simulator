@@ -938,7 +938,98 @@ export const SUBMERGED_MISSIONS: MissionDefinition[] = [
       },
     ],
   },
+  // ═══════════════════════════════════════════════════════════════
+  // M16: Precision Tokens — 6 small red tokens near left launch area
+  // ═══════════════════════════════════════════════════════════════
+  {
+    id: "M16",
+    name: "Precision Tokens",
+    shortName: "Precision",
+    description: "Keep all 6 precision tokens on the field. Each robot interruption outside home costs one token.",
+    position: { x: -HW - 0.15, z: -HD + 0.15 }, // left home area, near front
+    parts: [
+      {
+        id: "M16_token1",
+        type: "dynamic",
+        shape: "cylinder",
+        size: { x: 0.012, y: 0.006, z: 0.012 },
+        position: { x: 0.00, y: 0.003, z: 0.00 },
+        color: { r: 0.85, g: 0.15, b: 0.15 },
+        mass: 0.005,
+        friction: 0.8,
+        restitution: 0.1,
+      },
+      {
+        id: "M16_token2",
+        type: "dynamic",
+        shape: "cylinder",
+        size: { x: 0.012, y: 0.006, z: 0.012 },
+        position: { x: 0.035, y: 0.003, z: 0.00 },
+        color: { r: 0.85, g: 0.15, b: 0.15 },
+        mass: 0.005,
+        friction: 0.8,
+        restitution: 0.1,
+      },
+      {
+        id: "M16_token3",
+        type: "dynamic",
+        shape: "cylinder",
+        size: { x: 0.012, y: 0.006, z: 0.012 },
+        position: { x: 0.07, y: 0.003, z: 0.00 },
+        color: { r: 0.85, g: 0.15, b: 0.15 },
+        mass: 0.005,
+        friction: 0.8,
+        restitution: 0.1,
+      },
+      {
+        id: "M16_token4",
+        type: "dynamic",
+        shape: "cylinder",
+        size: { x: 0.012, y: 0.006, z: 0.012 },
+        position: { x: 0.105, y: 0.003, z: 0.00 },
+        color: { r: 0.85, g: 0.15, b: 0.15 },
+        mass: 0.005,
+        friction: 0.8,
+        restitution: 0.1,
+      },
+      {
+        id: "M16_token5",
+        type: "dynamic",
+        shape: "cylinder",
+        size: { x: 0.012, y: 0.006, z: 0.012 },
+        position: { x: 0.14, y: 0.003, z: 0.00 },
+        color: { r: 0.85, g: 0.15, b: 0.15 },
+        mass: 0.005,
+        friction: 0.8,
+        restitution: 0.1,
+      },
+      {
+        id: "M16_token6",
+        type: "dynamic",
+        shape: "cylinder",
+        size: { x: 0.012, y: 0.006, z: 0.012 },
+        position: { x: 0.175, y: 0.003, z: 0.00 },
+        color: { r: 0.85, g: 0.15, b: 0.15 },
+        mass: 0.005,
+        friction: 0.8,
+        restitution: 0.1,
+      },
+    ],
+    maxPoints: 50,
+    interactionType: "push", // tokens are passive physics objects
+  },
 ];
+
+/** Precision token bonus scoring table */
+export const PRECISION_TOKEN_BONUS: Record<number, number> = {
+  6: 50,
+  5: 50,
+  4: 35,
+  3: 25,
+  2: 15,
+  1: 10,
+  0: 0,
+};
 
 /** Get all missions for the current season */
 export function getSeasonMissions(): MissionDefinition[] {
