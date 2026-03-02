@@ -5,7 +5,7 @@
  * Right panel: Live scoring tracker
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useBabylonScene } from "@/hooks/useBabylonScene";
 import { ScoringEngine } from "@/lib/scoringEngine";
 import { getSeasonMissions } from "@/lib/missions";
@@ -14,7 +14,7 @@ import {
   CheckCircle2, Circle,
   PanelLeftClose, PanelLeftOpen,
   ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin, Zap,
-  Hammer, KeyRound, Eye, Coins, HelpCircle, X, ExternalLink,
+  Hammer, KeyRound, Eye, Coins, HelpCircle, X, ExternalLink, Users,
 } from "lucide-react";
 
 export default function Home() {
@@ -23,6 +23,30 @@ export default function Home() {
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set(["M01"])); // First mission expanded by default
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [visitorCount, setVisitorCount] = useState<number | null>(null);
+
+  // Visitor counter — increment once per session via counterapi.dev
+  useEffect(() => {
+    const COUNTER_API = "https://api.counterapi.dev/v1/fll-simulator-app/visits";
+    const alreadyCounted = sessionStorage.getItem("fll-sim-counted");
+
+    if (alreadyCounted) {
+      // Already counted this session — just read the current value
+      fetch(`${COUNTER_API}/`, { method: "GET" })
+        .then((r) => r.json())
+        .then((data) => setVisitorCount(data.count))
+        .catch(() => {});
+    } else {
+      // First visit this session — increment
+      fetch(`${COUNTER_API}/up`, { method: "GET" })
+        .then((r) => r.json())
+        .then((data) => {
+          setVisitorCount(data.count);
+          sessionStorage.setItem("fll-sim-counted", "1");
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Get static mission definitions for the hints panel
   const missionDefs = useMemo(() => getSeasonMissions(), []);
@@ -156,6 +180,15 @@ export default function Home() {
           <span className="data-readout text-[11px] font-bold text-cyan-glow">{sceneState.fps}</span>
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Physics</span>
           <span className="data-readout text-[11px] font-bold text-amber-score">{sceneState.physicsStep}</span>
+          {visitorCount !== null && (
+            <>
+              <div className="w-px h-4 bg-cyan-glow/20" />
+              <div className="flex items-center gap-1" title="Total visitors">
+                <Users className="w-3 h-3 text-cyan-glow/60" />
+                <span className="data-readout text-[10px] text-cyan-glow/70">{visitorCount.toLocaleString()}</span>
+              </div>
+            </>
+          )}
           <div className="w-px h-4 bg-cyan-glow/20" />
           <button
             onClick={() => setShowInfoModal(true)}
