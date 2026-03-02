@@ -343,6 +343,9 @@ export function useBabylonScene() {
       // Pre-allocate a reusable quaternion for the render loop
       const _reuseQuat = new Quaternion();
       let lastStateUpdate = 0;
+      let lastEKeyAction = 0; // cooldown tracker for E key actions
+      const E_KEY_COOLDOWN = 600; // ms between E key triggers
+      let eKeyWasDown = false; // track edge (press, not hold)
 
       engine.runRenderLoop(() => {
         if (disposedRef.current || !world || !scene) return;
@@ -369,6 +372,27 @@ export function useBabylonScene() {
 
         // Tick scoring engine (checks conditions every frame)
         scoringEngineRef.current.tick(renderedMissions, world);
+
+        // === E KEY ACTION HANDLER ===
+        // Detect E key press (edge-triggered, not hold) with cooldown
+        const eKeyDown = currentKeys && currentKeys.has("e");
+        if (eKeyDown && !eKeyWasDown) {
+          const actionNow = performance.now();
+          if (actionNow - lastEKeyAction > E_KEY_COOLDOWN) {
+            // Find nearest interactable using current robot position
+            const currentMatch = scoringEngineRef.current.getState();
+            const nearest = findNearestInteractable(pos, missionDefs, currentMatch);
+            if (nearest) {
+              const evt = scoringEngineRef.current.triggerMissionAction(nearest.missionId);
+              if (evt) {
+                lastEKeyAction = actionNow;
+                // Force an immediate state update so UI reacts instantly
+                lastStateUpdate = 0;
+              }
+            }
+          }
+        }
+        eKeyWasDown = !!eKeyDown;
 
         // Camera stays centered on the mat (no follow) so the full field is always visible
         // Users can still orbit/zoom manually

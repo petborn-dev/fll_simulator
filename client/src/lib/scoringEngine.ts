@@ -713,6 +713,43 @@ export class ScoringEngine {
     };
   }
 
+  /**
+   * Trigger the next uncompleted condition for a Category B mission.
+   * Called when the player presses E near an interactable mission.
+   * Returns the score event if successful, or null if no condition to complete.
+   */
+  triggerMissionAction(missionId: string): ScoreEvent | null {
+    if (this.matchPhase !== "running") return null;
+
+    const scoreState = this.missionScores.get(missionId);
+    if (!scoreState) return null;
+
+    const rules = MISSION_SCORING_RULES[missionId] ?? [];
+
+    // Find the first uncompleted condition and complete it
+    for (let i = 0; i < rules.length; i++) {
+      if (scoreState.conditions[i] && !scoreState.conditions[i].completed) {
+        scoreState.conditions[i].completed = true;
+        scoreState.earnedPoints += rules[i].points;
+
+        const evt: ScoreEvent = {
+          missionId,
+          description: rules[i].description,
+          points: rules[i].points,
+          timestamp: performance.now(),
+        };
+        this.recentEvents.push(evt);
+        this.completedEvents.push(evt);
+        if (this.recentEvents.length > ScoringEngine.MAX_EVENTS) {
+          this.recentEvents.shift();
+        }
+        return evt;
+      }
+    }
+
+    return null; // All conditions already completed
+  }
+
   /** Format time remaining as MM:SS */
   static formatTime(seconds: number): string {
     const m = Math.floor(seconds / 60);
