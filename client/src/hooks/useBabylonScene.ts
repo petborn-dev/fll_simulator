@@ -33,7 +33,7 @@ import {
 } from "@babylonjs/core";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { getSeasonMissions, type MissionDefinition } from "@/lib/missions";
-import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, resetMissionObjects, type RenderedMission } from "@/lib/missionRenderer";
+import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, resetMissionObjects, updateMissionLabelColors, type RenderedMission } from "@/lib/missionRenderer";
 import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
 import { playMissionAnimation, isAnimationPlaying } from "@/lib/missionAnimations";
 
@@ -421,6 +421,10 @@ export function useBabylonScene() {
           const nearestInteractable = findNearestInteractable(
             pos, missionDefs, scoringEngineRef.current.getState()
           );
+
+          // Update mission label colors based on completion status
+          const currentMatchState = scoringEngineRef.current.getState();
+          updateMissionLabelColors(renderedMissions, currentMatchState.missions);
 
           setSceneState({
             fps: Math.round(engine!.getFps()),

@@ -60,6 +60,10 @@ export interface RenderedMission {
   name: string;
   parts: RenderedMissionPart[];
   labelMesh: Mesh | null;
+  /** GUI rectangle control for the floating label (for dynamic color updates) */
+  labelRect: Rectangle | null;
+  /** GUI text control for the floating label (for dynamic color updates) */
+  labelText: TextBlock | null;
   origin: { x: number; z: number };
 }
 
@@ -88,7 +92,7 @@ function renderMission(
   const renderedParts: RenderedMissionPart[] = [];
 
   // Create a floating label above the mission
-  const labelMesh = createMissionLabel(mission, scene);
+  const labelResult = createMissionLabel(mission, scene);
 
   for (const part of mission.parts) {
     const rendered = renderPart(part, mission.position, scene, world, shadowGenerator);
@@ -99,7 +103,9 @@ function renderMission(
     id: mission.id,
     name: mission.name,
     parts: renderedParts,
-    labelMesh,
+    labelMesh: labelResult.anchor,
+    labelRect: labelResult.rect,
+    labelText: labelResult.text,
     origin: mission.position,
   };
 }
@@ -400,7 +406,7 @@ function getHingeAxis(axis: "x" | "y" | "z"): RAPIER.Vector3 {
  * Create a floating label above a mission using Babylon GUI for pixel-perfect crisp text.
  * Shows only the mission ID (e.g. "M01") to keep labels compact.
  */
-function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
+function createMissionLabel(mission: MissionDefinition, scene: Scene): { anchor: Mesh; rect: Rectangle; text: TextBlock } {
   const labelHeight = 0.25;
 
   // Invisible anchor mesh positioned above the mission
@@ -434,7 +440,7 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): Mesh {
   text.textVerticalAlignment = TextBlock.VERTICAL_ALIGNMENT_CENTER;
   rect.addControl(text);
 
-  return anchor as unknown as Mesh;
+  return { anchor: anchor as unknown as Mesh, rect, text };
 }
 
 /**
@@ -493,6 +499,50 @@ export function syncMissionPhysics(missions: RenderedMission[]): void {
           }
         }
       }
+    }
+  }
+}
+
+// ─── Label Color Constants ───────────────────────────────────────
+const LABEL_COLOR_NONE = { border: "#00e5ff", text: "#00ffff", shadow: "rgba(0, 229, 255, 0.4)", bg: "rgba(0, 8, 16, 0.92)" };
+const LABEL_COLOR_PARTIAL = { border: "#f5a623", text: "#ffc857", shadow: "rgba(245, 166, 35, 0.45)", bg: "rgba(16, 10, 0, 0.92)" };
+const LABEL_COLOR_COMPLETE = { border: "#34d399", text: "#6ee7b7", shadow: "rgba(52, 211, 153, 0.45)", bg: "rgba(0, 16, 8, 0.92)" };
+
+/**
+ * Update the floating label colors for all missions based on completion status.
+ * Call this periodically (e.g. at ~5Hz in the render loop state update).
+ *
+ * @param missions - rendered missions with labelRect/labelText references
+ * @param matchMissions - mission score states from the scoring engine
+ */
+export function updateMissionLabelColors(
+  missions: RenderedMission[],
+  matchMissions: { missionId: string; conditions: { completed: boolean }[] }[]
+): void {
+  for (const rm of missions) {
+    if (!rm.labelRect || !rm.labelText) continue;
+
+    const matchMission = matchMissions.find((m) => m.missionId === rm.id);
+    if (!matchMission) continue;
+
+    const totalConditions = matchMission.conditions.length;
+    const completedCount = matchMission.conditions.filter((c) => c.completed).length;
+
+    let colors: typeof LABEL_COLOR_NONE;
+    if (totalConditions > 0 && completedCount === totalConditions) {
+      colors = LABEL_COLOR_COMPLETE;
+    } else if (completedCount > 0) {
+      colors = LABEL_COLOR_PARTIAL;
+    } else {
+      colors = LABEL_COLOR_NONE;
+    }
+
+    // Only update if color actually changed (avoid unnecessary redraws)
+    if (rm.labelRect.color !== colors.border) {
+      rm.labelRect.color = colors.border;
+      rm.labelRect.background = colors.bg;
+      rm.labelRect.shadowColor = colors.shadow;
+      rm.labelText.color = colors.text;
     }
   }
 }
