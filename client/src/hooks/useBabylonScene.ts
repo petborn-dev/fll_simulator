@@ -54,8 +54,8 @@ const AXLE_HALF_WIDTH = ROBOT_WIDTH / 2;
 
 // Robot physics
 const ROBOT_MASS = 0.8;
-const MAX_SPEED = 0.8;
-const TURN_SPEED = 4.0;
+const MAX_SPEED = 0.4;
+const TURN_SPEED = 2.0;
 const PHYSICS_DT = 1 / 60;
 
 // State update interval in ms (~5Hz = 200ms)
