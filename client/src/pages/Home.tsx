@@ -14,7 +14,7 @@ import {
   CheckCircle2, Circle,
   PanelLeftClose, PanelLeftOpen,
   ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin, Zap,
-  Hammer, KeyRound, Eye, Coins,
+  Hammer, KeyRound, Eye, Coins, HelpCircle, X, ExternalLink,
 } from "lucide-react";
 
 export default function Home() {
@@ -22,6 +22,7 @@ export default function Home() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set(["M01"])); // First mission expanded by default
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   // Get static mission definitions for the hints panel
   const missionDefs = useMemo(() => getSeasonMissions(), []);
@@ -149,14 +150,137 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Right: FPS + Sidebar toggle */}
+        {/* Right: FPS + Info + Sidebar toggle */}
         <div className="flex items-center gap-3">
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider">FPS</span>
           <span className="data-readout text-[11px] font-bold text-cyan-glow">{sceneState.fps}</span>
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Physics</span>
           <span className="data-readout text-[11px] font-bold text-amber-score">{sceneState.physicsStep}</span>
+          <div className="w-px h-4 bg-cyan-glow/20" />
+          <button
+            onClick={() => setShowInfoModal(true)}
+            className="p-1 rounded text-muted-foreground hover:text-cyan-glow hover:bg-cyan-glow/10 transition-colors"
+            title="About this simulator"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
       </div>
+
+      {/* ===== INFO MODAL ===== */}
+      {showInfoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowInfoModal(false)}>
+          <div
+            className="relative w-full max-w-2xl mx-4 bg-background border border-hud-border/60 rounded-lg shadow-2xl shadow-cyan-glow/10 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-hud-border/40 bg-hud-bg/60">
+              <div className="flex items-center gap-2">
+                <Anchor className="w-4 h-4 text-cyan-glow" />
+                <span className="data-readout text-sm text-cyan-glow font-bold tracking-wider">ABOUT FLL SUBMERGED</span>
+              </div>
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="p-1 rounded text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Embedded YouTube Video */}
+              <div className="relative w-full aspect-video rounded-md overflow-hidden border border-hud-border/30 bg-black">
+                <iframe
+                  src="https://www.youtube.com/embed/J5u-2q_K3O0"
+                  title="FLL SUBMERGED 2024-25 Season Introduction"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+
+              {/* Season Description */}
+              <div className="space-y-3">
+                <h3 className="data-readout text-sm text-cyan-glow font-bold tracking-wider uppercase">Season Overview</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  SUBMERGED is the 2024-25 FIRST LEGO League season. Teams explore the mysteries of the deep sea,
+                  building and programming autonomous robots to complete 16 missions on a themed field mat. Missions
+                  involve coral nurseries, underwater creatures, sonar discovery, research vessels, and more.
+                </p>
+              </div>
+
+              {/* Simulator Quick Start */}
+              <div className="space-y-3">
+                <h3 className="data-readout text-sm text-amber-score font-bold tracking-wider uppercase">Quick Start</h3>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded bg-hud-bg/40 border border-hud-border/20">
+                    <span className="data-readout text-cyan-glow font-bold">WASD</span>
+                    <span className="text-muted-foreground">Drive robot</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded bg-hud-bg/40 border border-hud-border/20">
+                    <span className="data-readout text-cyan-glow font-bold">E</span>
+                    <span className="text-muted-foreground">Interact with mission</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded bg-hud-bg/40 border border-hud-border/20">
+                    <span className="data-readout text-cyan-glow font-bold">Mouse</span>
+                    <span className="text-muted-foreground">Orbit camera</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded bg-hud-bg/40 border border-hud-border/20">
+                    <span className="data-readout text-cyan-glow font-bold">Scroll</span>
+                    <span className="text-muted-foreground">Zoom in/out</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scoring Summary */}
+              <div className="space-y-2">
+                <h3 className="data-readout text-sm text-amber-score font-bold tracking-wider uppercase">Scoring</h3>
+                <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Hammer className="w-3 h-3 text-amber-score/70" />
+                    <span>6 push missions (drive into objects)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <KeyRound className="w-3 h-3 text-cyan-glow/70" />
+                    <span>9 trigger missions (press E near object)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Max score: <span className="text-amber-score font-bold">605 pts</span> (555 missions + 50 precision tokens)</p>
+              </div>
+
+              {/* Links */}
+              <div className="flex items-center gap-3 pt-2 border-t border-hud-border/20">
+                <a
+                  href="https://youtu.be/J5u-2q_K3O0?feature=shared"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[10px] text-cyan-glow/70 hover:text-cyan-glow transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" /> Watch on YouTube
+                </a>
+                <a
+                  href="https://www.firstlegoleague.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[10px] text-cyan-glow/70 hover:text-cyan-glow transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" /> FIRST LEGO League
+                </a>
+                <a
+                  href="https://github.com/petborn-dev/fll_simulator"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[10px] text-cyan-glow/70 hover:text-cyan-glow transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" /> GitHub
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== MIDDLE: Left Hints + Canvas + Right Scoring ===== */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
