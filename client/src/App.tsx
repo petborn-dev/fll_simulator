@@ -1,12 +1,12 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 
-function Router() {
+function AppRouter() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
@@ -16,13 +16,18 @@ function Router() {
   );
 }
 
+// Detect base path from Vite's base config (e.g., /fll_simulator/ on GitHub Pages)
+const base = import.meta.env.BASE_URL || "/";
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <WouterRouter base={base.endsWith("/") ? base.slice(0, -1) : base}>
+            <AppRouter />
+          </WouterRouter>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
