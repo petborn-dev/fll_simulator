@@ -1,15 +1,35 @@
-# FLL 3D Simulator — Development Plan (v2)
+# FLL 3D Simulator — Development Plan (v3 — Final)
 
-## Current State (Completed)
+## Project Status: All 10 Phases Complete
 
-All 15 missions placed on field with basic box/cylinder primitives. Mat texture corrected. Left-side mission guide panel. Start/Reset controls. Basic physics-based scoring engine (push only). Persistent scored missions list at top-right. Positions corrected to match official field chart.
+All 16 missions are implemented and playable. The simulator features compound 3D models derived from GearsBot data, a hybrid scoring engine (physics + trigger), proximity detection with E-key interactions, smooth Babylon.js animations, Web Audio sound effects, dynamic mission label colors, click-to-zoom, and M16 precision token bonuses. Deployed to GitHub Pages with automatic CI/CD.
+
+**Live:** [https://petborn-dev.github.io/fll_simulator/](https://petborn-dev.github.io/fll_simulator/)
+
+---
+
+## Phase Completion Summary
+
+| Phase | Title | Status | Key Files Modified |
+|-------|-------|--------|--------------------|
+| 1 | Map GearsBot Objects → Missions | **Done** | `MAPPING.md` |
+| 2 | Build Compound Primitive Renderer | **Done** | `missionRenderer.ts` |
+| 3 | Convert GearsBot Models → Our Format | **Done** | `missions.ts` |
+| 4 | Proximity Detection System | **Done** | `useBabylonScene.ts`, `Home.tsx`, `missions.ts` |
+| 5 | Mission Action Framework | **Done** | `scoringEngine.ts`, `useBabylonScene.ts` |
+| 6 | Mission Animations | **Done** | `missionAnimations.ts`, `useBabylonScene.ts` |
+| 7 | Hybrid Scoring Engine | **Done** | `scoringEngine.ts` |
+| 8 | M16 Precision Tokens | **Done** | `missions.ts`, `scoringEngine.ts`, `Home.tsx` |
+| 9 | UI Polish & Feedback | **Done** | `soundEffects.ts`, `Home.tsx`, `useBabylonScene.ts` |
+| 10 | Testing, Balancing & Delivery | **Done** | `missionRenderer.ts`, `missionAnimations.ts`, `Home.tsx` |
 
 ---
 
 ## Mission Interaction Classification
 
 ### Category A: Push/Physics Missions
-Robot body pushes objects. Scoring is physics-based (distance, hinge angle, movement detection).
+
+Robot body pushes objects. Scoring is physics-based (distance, hinge angle, movement detection). Physics checks run every frame in the `tick()` method.
 
 | Mission | Action | Physics Behavior |
 |---------|--------|-----------------|
@@ -21,265 +41,101 @@ Robot body pushes objects. Scoring is physics-based (distance, hinge angle, move
 | M13 Change Shipping Lanes | Push ship to new lane | Push dynamic body to zone |
 
 ### Category B: Key-Trigger Missions
-Drive near + press E to perform action. Complex interactions (hang, hook, latch, place, collect).
 
-| Mission | Action | Stages |
-|---------|--------|--------|
-| M01 Coral Nursery | Hang tree, flip buds | 2 stages (20 + 20 pts) |
-| M04 Scuba Diver | Deliver diver to safe zone | 1 stage (20 pts) |
-| M05 Angler Fish | Latch fish in shipwreck | 1 stage (30 pts) |
-| M08 Artificial Habitat | Stack habitat segments | 2 stages (20 + 20 pts) |
-| M09 Unexpected Encounter | Release creature to seep | 1 stage (20 pts) |
-| M11 Sonar Discovery | Reveal whales via sonar | 2 stages (20 + 10 pts) |
-| M12 Feed the Whale | Place krill in mouth | 3 stages (10 each, max 30 pts) |
-| M14 Sample Collection | Collect 4 sample types | 4 stages (10 each, max 40 pts) |
-| M15 Research Vessel | Load cargo, latch port | 1 stage (20 pts) |
+Drive near + press E to perform action. Complex interactions (hang, hook, latch, place, collect). Scored exclusively via `triggerMissionAction()`. Physics checks are skipped for these missions.
 
----
+| Mission | Action | Stages | Points |
+|---------|--------|--------|--------|
+| M01 Coral Nursery | Hang tree, flip buds | 2 | 30 + 20 |
+| M04 Scuba Diver | Deliver diver, resurface | 2 | 20 + 20 |
+| M05 Angler Fish | Latch fish in target | 1 | 30 |
+| M08 Artificial Habitat | Stack habitat segments | 2 | 20 + 20 |
+| M09 Unexpected Encounter | Release creature | 1 | 30 |
+| M11 Sonar Discovery | Flip sonar panels | 2 | 20 + 10 |
+| M12 Feed the Whale | Place krill in mouth | 3 | 10 + 10 + 30 |
+| M14 Sample Collection | Collect 4 samples | 4 | 10 + 10 + 15 + 20 |
+| M15 Research Vessel | Load cargo, latch port | 2 | 20 + 20 |
 
-## Implementation Phases
+### M16 Precision Tokens
 
-### Phase 1: Map GearsBot Objects to Our Missions
-**Goal:** Analyze `FLL2024.json` and create a complete mapping of GearsBot objects → our missions.
-
-**What:** The GearsBot simulator (QuirkyCort/gears) has `FLL2024.json` containing all 15 mission objects as compound primitives (boxes, cylinders, spheres, hinges) with accurate colors and physics. We need to identify which GearsBot object corresponds to which mission.
-
-**Tasks:**
-- Parse all 15 GearsBot objects and their sub-parts
-- Cross-reference positions with official field layout to identify each mission
-- Create mapping table: GearsBot Object Index → Mission ID → Part descriptions
-- Document coordinate conversion formula (GearsBot cm → our meters)
-
-**Output:** `mission-mapping.md` reference document.
+Six dynamic red cylinders in the home area. End-of-match bonus based on tokens remaining on field. Maximum bonus: 50 points.
 
 ---
 
-### Phase 2: Build Compound Primitive Renderer
-**Goal:** Extend `missionRenderer.ts` to create multi-part 3D models instead of single boxes.
+## Architecture Decisions
 
-**What:** Currently each mission is rendered as 1–3 simple shapes. We need to support compound models with 3–26 sub-parts, each with its own type, position, size, color, rotation, and physics.
+### Hybrid Scoring Engine
 
-**Tasks:**
-- Define `CompoundPart` type: `{ type, relativePosition, size, color, rotation, physicsType }`
-- Define `CompoundModel` type: array of `CompoundPart` with optional hinge joints
-- Refactor `renderMission()` to build compound models from data definitions
-- Group all sub-parts under a parent transform node for easy reset
-- Store initial positions of all sub-parts for reset functionality
-- Support hinge joints between parts (axis, limits, motor)
+The scoring engine maintains a `TRIGGER_MISSIONS` set built from mission definitions at initialization. During `tick()`, physics checks are skipped for any mission in this set. This prevents conflicts where physics might accidentally complete a trigger mission (e.g., the robot bumping a Category B object and triggering a score). Category B missions are scored only through explicit E-key interaction via `triggerMissionAction()`.
 
-**Output:** Updated renderer that creates realistic multi-part 3D objects.
+### Compound Model Optimization
 
----
+Static compound parts (those with `physicsType: "static"` and no animation targets) are merged into single meshes using Babylon.js `Mesh.MergeMeshes()` after initial rendering. This reduces draw calls from approximately 150+ individual meshes to approximately 30-40 merged meshes, improving frame rate from ~5 FPS to ~8-15 FPS depending on hardware. Shadow casters are limited to dynamic and hinge parts only.
 
-### Phase 3: Convert GearsBot Models → Our Format
-**Goal:** Translate all 15 GearsBot compound primitive definitions into our mission data.
+### Coordinate Conversion
 
-**What:** Write a conversion script that reads `FLL2024.json` and outputs TypeScript-compatible mission part definitions in our coordinate system.
-
-**Tasks:**
-- Write Python conversion script: GearsBot JSON → our `missions.ts` format
-- Apply coordinate transformation:
-  - GearsBot: 200cm × 100cm field, positions in cm, origin at center
-  - Ours: ~2.362m × 1.143m field, positions in meters, origin at center
-  - Scale: `our_x = gears_x * (2.362/200)`, `our_z = gears_y * (1.143/100)`
-- Preserve hex color codes (already compatible)
-- Convert hinge definitions (axis, limits)
-- Manually verify each converted mission against official photos
-- Update `missions.ts` with new compound model definitions
-
-**Output:** Updated `missions.ts` with realistic compound models for all 15 missions.
-
----
-
-### Phase 4: Proximity Detection System
-**Goal:** Detect when robot is near a mission and show an interaction prompt.
-
-**Tasks:**
-- Add `triggerRadius` to each mission definition (default ~0.15m)
-- Every frame during match, check robot distance to all Category B missions
-- Track the "nearest interactable mission" within trigger range
-- Show floating "Press [E] — Mission Name" prompt above active mission
-- Add visual highlight (glow/outline) on the active mission
-- Only show prompt for Category B missions (Category A is physics-only)
-
-**Output:** Working proximity detection with visual prompt overlay.
-
----
-
-### Phase 5: Mission Action Framework
-**Goal:** Create the action execution system for Category B missions.
-
-**Tasks:**
-- Define `MissionAction` interface:
-  - `canTrigger(robotPos, completedStages)` — is robot in range + stage available?
-  - `execute(parts, scene)` — play animation, update state
-  - `getStageCount()` — total stages for this mission
-- Each Category B mission gets action implementation with 1–4 stages
-- Track completed stages per mission
-- Prevent re-triggering completed stages
-- Wire "E" key to execute next available stage on active mission
-- Actions are one-way (undo only via Reset)
-
-**Output:** Working action framework for staged mission execution.
-
----
-
-### Phase 6: Mission Animations
-**Goal:** Create smooth Babylon.js animations for all 9 Category B mission actions.
-
-**Tasks:** For each mission, create a 0.3–1.5 second animation sequence:
-
-| Mission | Animation Description | Duration |
-|---------|----------------------|----------|
-| M01 Stage 1 | Tree rises up onto support post | 0.5s |
-| M01 Stage 2 | Coral buds rotate 180° (flip open) | 0.3s |
-| M04 | Diver lifts up, moves to safe zone | 0.8s |
-| M05 | Fish slides into wreck, gate closes | 0.7s |
-| M08 Stage 1 | First segment rotates into stacked position | 0.3s |
-| M08 Stage 2 | Second segment stacks on top | 0.3s |
-| M09 | Creature pops up, slides to cold seep | 0.8s |
-| M11 Stage 1 | First sonar panel flips 180° | 0.4s |
-| M11 Stage 2 | Second panel flips, reveals whale | 0.4s |
-| M12 (×3) | Each krill moves into whale mouth | 0.3s each |
-| M14 (×4) | Each sample lifts off its location | 0.3s each |
-| M15 | Items slide into cargo, latch connects | 0.7s |
-
-- Use Babylon.js `Animation` class for smooth lerps
-- Disable E-key during animation to prevent double-trigger
-- After animation, update scoring state immediately
-
-**Output:** All Category B missions have smooth trigger animations.
-
----
-
-### Phase 7: Update Scoring Engine for Hybrid System
-**Goal:** Unify physics-based (Cat A) and trigger-based (Cat B) scoring.
-
-**Tasks:**
-- Category A: keep existing physics checks (distance, movement, hinge angle)
-- Category B: score based on completed action stages (not physics)
-- Remove physics scoring checks for Category B missions to avoid conflicts
-- Update `completedEvents` to include both types
-- Ensure Reset clears both physics state AND trigger state
-- Ensure Start resets all trigger states
-
-**Output:** Unified scoring engine handling both interaction types.
-
----
-
-### Phase 8: M16 Precision Tokens
-**Goal:** Implement the precision token bonus scoring.
-
-**Tasks:**
-- Add 6 small precision token objects near the launch area
-- Tokens are dynamic physics objects (can be knocked off field)
-- At match end (timer reaches 0), count tokens remaining on field
-- Award bonus: 6 remaining → 50pts, 5 → 50pts, 4 → 35pts, 3 → 25pts, 2 → 15pts, 1 → 10pts
-- Show token count in the UI during match
-- Tokens reset with other objects on Reset
-
-**Output:** Working precision token system with end-of-match bonus.
-
----
-
-### Phase 9: UI Polish & Feedback
-**Goal:** Make the interaction system feel polished and informative.
-
-**Tasks:**
-- Floating "Press E" prompt: styled pill, smooth appear/disappear
-- Score popup: green "+X pts" animation on score (both categories)
-- Mission guide panel: icons to distinguish push (🔨) vs interact (🔑)
-- Mission guide panel: show completion status (checkmarks per stage)
-- Sound effects: Web Audio API tone on successful score
-- Optional: click mission in guide → camera zooms to that mission
-
-**Output:** Polished interaction UX with clear visual and audio feedback.
-
----
-
-### Phase 10: Testing, Balancing & Delivery
-**Goal:** Test all 15 missions + M16, tune parameters, and deliver.
-
-**Tasks:**
-- Test each Category A mission: push scoring works correctly
-- Test each Category B mission: proximity + E + animation + scoring
-- Test multi-stage missions: all stages work independently
-- Test Reset: all objects return to initial state (physics + animated positions)
-- Test Start: robot resets, timer starts, scores clear
-- Tune trigger radii and physics parameters
-- Save checkpoint, push to GitHub, deliver
-
-**Output:** Fully tested simulator with all missions playable and scoring correctly.
-
----
-
-## Phase Dependency Chain
-
-Animations (Phase 6) require compound models to exist, because we need individual sub-meshes to animate (e.g., separate tree, support post, and coral buds for M01). The dependency chain is:
+GearsBot uses a 100cm × 100cm field with center origin. Our simulator uses a ~2.362m × 1.143m field with center origin. The conversion formula applied during Phase 3 was:
 
 ```
-Phase 1: Map GearsBot Objects (identify which parts are which)
-    │
-    ▼
-Phase 2: Build Compound Renderer (support multi-part models)
-    │
-    ▼
-Phase 3: Convert Models (get realistic multi-part objects in scene)
-    │
-    ├──────────────────────────────────┐
-    ▼                                  ▼
-Phase 4: Proximity Detection     Phase 7: Scoring Engine Update
-    │                              (can start Cat A physics tuning)
-    ▼
-Phase 5: Action Framework
-    │
-    ▼
-Phase 6: Animations (REQUIRES Phase 3 — needs individual meshes)
-    │
-    ├──────────────────────────────────┐
-    ▼                                  ▼
-Phase 7: Scoring Engine          Phase 8: M16 Precision Tokens
-    (finalize Cat B scoring)           │
-    │                                  │
-    ▼                                  ▼
-Phase 9: UI Polish & Feedback
-    │
-    ▼
-Phase 10: Testing, Balancing & Delivery
+our_x = gearsbot_x * (2.362 / 200)
+our_z = gearsbot_z * (1.143 / 100)
+our_y = gearsbot_y * (1.143 / 100)  // height uses same scale as depth
 ```
 
-**Critical path:** Phases 1 → 2 → 3 → 5 → 6 → 7 → 10
+Sub-part positions are relative to their parent object's world position in GearsBot, so the conversion applies the parent offset first, then scales.
 
-**Can run in parallel:**
-- Phase 4 (proximity detection) can start alongside Phase 2–3 since the framework code doesn't need actual models
-- Phase 8 (precision tokens) is independent and can be done anytime after Phase 3
-- Phase 9 (UI polish) can start after Phase 6 is done
+### Sound Design
+
+All sounds are procedurally generated using the Web Audio API oscillator and gain nodes. No audio files are loaded. This keeps the bundle size small and avoids CORS issues on static hosting. Three sound types are used: ascending chime (score), click (E key press), and fanfare (match end).
+
+### GitHub Pages Routing
+
+Since GitHub Pages serves static files and does not support server-side routing, the wouter router is configured with a `base` prop derived from Vite's `import.meta.env.BASE_URL`. In production, this resolves to `/fll_simulator/`, allowing the SPA to correctly route under the subdirectory.
 
 ---
 
-## Effort Estimate
+## Known Limitations and Future Work
 
-| Phase | Effort | Primary Files |
-|-------|--------|--------------|
-| 1: Map GearsBot Objects | Low | Reference doc only |
-| 2: Compound Renderer | Medium | `missionRenderer.ts` |
-| 3: Convert Models | Medium | `missions.ts`, conversion script |
-| 4: Proximity Detection | Medium | `useBabylonScene.ts`, `Home.tsx` |
-| 5: Action Framework | Medium-High | New `missionActions.ts` |
-| 6: Animations | High | `missionActions.ts` |
-| 7: Scoring Engine | Medium | `scoringEngine.ts` |
-| 8: Precision Tokens | Low-Medium | `missions.ts`, `scoringEngine.ts` |
-| 9: UI Polish | Medium | `Home.tsx`, `missionRenderer.ts` |
-| 10: Testing & Delivery | Low-Medium | Bug fixes across all files |
+### Current Limitations
+
+1. **Performance**: Frame rate is approximately 8-15 FPS on mid-range hardware due to the large number of physics bodies and meshes. Further optimization (instanced rendering, LOD, reduced physics tick rate) could improve this.
+
+2. **Category A Tuning**: Some physics-based missions (M02 Shark, M03 Coral Reef) may require geometry and threshold tuning to reliably trigger scoring when pushed.
+
+3. **Mobile Support**: The simulator is desktop-only. Touch controls, responsive layout, and GPU optimization would be needed for mobile/tablet support.
+
+4. **Missing Compound Models**: Five missions (M02, M04, M13, M14, M15) use simplified placeholder geometry rather than detailed compound models.
+
+### Potential Improvements
+
+1. Merge all remaining static meshes and implement instanced rendering for repeated shapes.
+2. Add a volume/mute toggle for sound effects.
+3. Add a "best score" tracker using localStorage.
+4. Implement camera-follow mode that tracks the robot.
+5. Add a replay system to record and playback match runs.
+6. Build detailed compound models for the 5 placeholder missions.
+7. Add a 2D minimap overlay for navigation.
 
 ---
 
 ## Technical Notes
 
-- Animations use Babylon.js `Animation` class or manual lerp in render loop
-- Proximity checks run in existing physics tick loop (cheap — just distance calc)
-- "E" key added to existing keyboard handler in `useBabylonScene`
-- Mission actions stored in new file: `client/src/lib/missionActions.ts`
-- Actions modify Rapier rigid body positions directly (teleport, not physics force)
-- GearsBot `FLL2024.json` is the source of truth for compound model geometry
-- All compound parts grouped under parent TransformNode for easy reset
+### Key Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@babylonjs/core` | 8.53+ | 3D rendering engine |
+| `@babylonjs/gui` | 8.53+ | In-scene GUI (labels, overlays) |
+| `@dimforge/rapier3d-compat` | 0.19+ | WASM physics engine |
+| `react` | 19.2+ | UI framework |
+| `wouter` | 3.3+ | Client-side routing |
+| `tailwindcss` | 4.1+ | Utility CSS framework |
+| `vite` | 7.1+ | Build tool and dev server |
+
+### File Size
+
+The production bundle is approximately 9 MB (2.3 MB gzipped), dominated by Babylon.js and Rapier WASM. Code splitting could reduce initial load time but is not yet implemented.
+
+### Browser Compatibility
+
+Tested on Chromium-based browsers (Chrome, Edge). Requires WebGL 2 and WebAssembly support. Safari and Firefox should work but are not actively tested.
