@@ -4,15 +4,25 @@
  * Manages match state (idle → running → ended), 2:30 countdown timer,
  * per-mission scoring rules, and collision-based completion detection.
  *
- * Scoring rules are simplified approximations of the official FLL
- * SUBMERGED 2024-25 rulebook. Each mission has one or more scoring
- * conditions checked against the physics state every frame.
- *
- * v2: More forgiving thresholds, lower movement detection, score events
+ * v3: Hybrid scoring engine
+ * - Category A (push): physics-based checks run every frame in tick()
+ * - Category B (trigger): scored only via triggerMissionAction() on E key press
+ * - Physics checks are SKIPPED for Category B missions to prevent conflicts
+ * - Both types share the same MISSION_SCORING_RULES definitions
  */
 
 import type { RenderedMission, RenderedMissionPart } from "./missionRenderer";
 import RAPIER from "@dimforge/rapier3d-compat";
+import { getSeasonMissions } from "./missions";
+
+// ─── Category B (trigger) mission IDs ─────────────────────────────
+// These missions are scored via E key (triggerMissionAction), NOT physics.
+// The tick() loop skips physics checks for these missions.
+const TRIGGER_MISSION_IDS: Set<string> = new Set(
+  getSeasonMissions()
+    .filter((m) => m.interactionType === "trigger")
+    .map((m) => m.id)
+);
 
 // ─── Match Constants ───────────────────────────────────────────────
 export const MATCH_DURATION_SECONDS = 150; // 2 minutes 30 seconds
@@ -656,6 +666,11 @@ export class ScoringEngine {
       const scoreState = this.missionScores.get(mission.id);
       if (!scoreState) continue;
 
+      // Skip physics-based scoring for Category B (trigger) missions.
+      // These are scored exclusively via triggerMissionAction() on E key press.
+      if (TRIGGER_MISSION_IDS.has(mission.id)) continue;
+
+      // Category A (push) missions: check physics conditions every frame
       const rules = MISSION_SCORING_RULES[mission.id] ?? [];
       for (let i = 0; i < rules.length; i++) {
         if (scoreState.conditions[i] && !scoreState.conditions[i].completed) {
