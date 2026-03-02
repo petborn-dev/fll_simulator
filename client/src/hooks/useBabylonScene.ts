@@ -35,6 +35,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { getSeasonMissions, type MissionDefinition } from "@/lib/missions";
 import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, resetMissionObjects, type RenderedMission } from "@/lib/missionRenderer";
 import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
+import { playMissionAnimation, isAnimationPlaying } from "@/lib/missionAnimations";
 
 // FLL field dimensions in meters (real: 2362mm x 1143mm)
 const FIELD_WIDTH = 2.362;
@@ -375,20 +376,29 @@ export function useBabylonScene() {
 
         // === E KEY ACTION HANDLER ===
         // Detect E key press (edge-triggered, not hold) with cooldown
+        // Blocked during animations to prevent double-triggers
         const eKeyDown = currentKeys && currentKeys.has("e");
-        if (eKeyDown && !eKeyWasDown) {
+        if (eKeyDown && !eKeyWasDown && !isAnimationPlaying()) {
           const actionNow = performance.now();
           if (actionNow - lastEKeyAction > E_KEY_COOLDOWN) {
             // Find nearest interactable using current robot position
             const currentMatch = scoringEngineRef.current.getState();
             const nearest = findNearestInteractable(pos, missionDefs, currentMatch);
             if (nearest) {
-              const evt = scoringEngineRef.current.triggerMissionAction(nearest.missionId);
-              if (evt) {
-                lastEKeyAction = actionNow;
-                // Force an immediate state update so UI reacts instantly
+              const stageToAnimate = nearest.stagesCompleted; // 0-indexed
+              // Play animation first, then score
+              lastEKeyAction = actionNow;
+              playMissionAnimation(
+                nearest.missionId,
+                stageToAnimate,
+                renderedMissions,
+                scene
+              ).then(() => {
+                // Score after animation completes
+                scoringEngineRef.current.triggerMissionAction(nearest.missionId);
+                // Force immediate state update
                 lastStateUpdate = 0;
-              }
+              });
             }
           }
         }
