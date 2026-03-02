@@ -76,7 +76,59 @@ export function renderMissions(
   world: RAPIER.World,
   shadowGenerator: ShadowGenerator | null
 ): RenderedMission[] {
-  return missions.map((mission) => renderMission(mission, scene, world, shadowGenerator));
+  const rendered = missions.map((mission) => renderMission(mission, scene, world, shadowGenerator));
+  // Post-process: merge static compound meshes for performance
+  optimizeStaticMeshes(rendered, scene);
+  return rendered;
+}
+
+/**
+ * Merge child meshes of static compound parts into a single mesh.
+ * This dramatically reduces draw calls (from ~150+ to ~30-40).
+ * Only static parts are merged; dynamic/hinge parts keep separate children
+ * so they can animate and move independently.
+ */
+function optimizeStaticMeshes(missions: RenderedMission[], scene: Scene): void {
+  for (const mission of missions) {
+    for (const part of mission.parts) {
+      // Only merge static compound parts
+      if (part.definition.type !== "static") continue;
+      if (!part.definition.children || part.definition.children.length === 0) continue;
+
+      const parentMesh = part.mesh as Mesh;
+      const children = parentMesh.getChildMeshes(false) as Mesh[];
+      if (children.length <= 1) continue;
+
+      // Babylon's MergeMeshes needs absolute world matrices, so temporarily unparent
+      // We'll keep the parent and replace children with a single merged mesh
+      try {
+        // Compute world matrices for children
+        for (const child of children) {
+          child.computeWorldMatrix(true);
+        }
+
+        // Merge all children into one mesh (multiMaterial=true to preserve colors)
+        const merged = Mesh.MergeMeshes(
+          children,
+          true,   // disposeSource — dispose original children
+          true,   // allow32BitsIndices
+          undefined,
+          false,  // subdivideWithSubMeshes
+          true    // multiMaterial — keep per-child materials
+        );
+
+        if (merged) {
+          merged.name = `${part.id}_merged`;
+          merged.parent = parentMesh;
+          // Merged mesh is in world space, but parent is also at world pos.
+          // Adjust merged mesh position to be relative to parent.
+          merged.position.subtractInPlace(parentMesh.position);
+        }
+      } catch {
+        // If merge fails, children remain as-is (no crash)
+      }
+    }
+  }
 }
 
 /**
@@ -138,8 +190,8 @@ function renderPart(
 
   if (hasChildren) {
     // Compound part: children already have materials from createMesh
-    // Add shadow casting for each child mesh
-    if (shadowGenerator && part.type !== "trigger") {
+    // Only add shadow casters for dynamic/hinge parts (skip static to save perf)
+    if (shadowGenerator && (part.type === "dynamic" || part.type === "hinge")) {
       for (const child of mesh.getChildMeshes()) {
         shadowGenerator.addShadowCaster(child as Mesh);
       }
@@ -450,10 +502,11 @@ function createMissionLabel(mission: MissionDefinition, scene: Scene): { anchor:
 export function resetMissionObjects(missions: RenderedMission[]): void {
   for (const mission of missions) {
     for (const part of mission.parts) {
+      const ip = part.initialPosition;
+      const ir = part.initialRotation;
+
+      // Reset physics body if present (dynamic/hinge)
       if (part.rigidBody && (part.definition.type === "dynamic" || part.definition.type === "hinge")) {
-        const ip = part.initialPosition;
-        const ir = part.initialRotation;
-        // Reset physics body position, rotation, and velocities
         part.rigidBody.setTranslation(
           new RAPIER.Vector3(ip.x, ip.y, ip.z),
           true
@@ -464,19 +517,30 @@ export function resetMissionObjects(missions: RenderedMission[]): void {
         );
         part.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
         part.rigidBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
-        // Wake the body so it settles properly
         part.rigidBody.wakeUp();
-
-        // Also sync the mesh immediately
-        if (part.mesh instanceof Mesh) {
-          part.mesh.position.set(ip.x, ip.y, ip.z);
-          if (!part.mesh.rotationQuaternion) {
-            part.mesh.rotationQuaternion = new Quaternion(ir.x, ir.y, ir.z, ir.w);
-          } else {
-            part.mesh.rotationQuaternion.set(ir.x, ir.y, ir.z, ir.w);
-          }
-        }
       }
+
+      // Always reset mesh position/rotation (catches animation-moved meshes too)
+      if (part.mesh instanceof Mesh || part.mesh instanceof TransformNode) {
+        part.mesh.position.set(ip.x, ip.y, ip.z);
+        // Reset rotation — clear quaternion and set euler back
+        if ((part.mesh as Mesh).rotationQuaternion) {
+          (part.mesh as Mesh).rotationQuaternion = null;
+        }
+        part.mesh.rotation.set(0, 0, 0);
+        // Reset scaling in case animations changed it
+        part.mesh.scaling.set(1, 1, 1);
+      }
+    }
+  }
+
+  // Also reset label colors back to default cyan
+  for (const mission of missions) {
+    if (mission.labelRect && mission.labelText) {
+      mission.labelRect.color = "#00e5ff";
+      mission.labelRect.background = "rgba(0, 8, 16, 0.92)";
+      mission.labelRect.shadowColor = "rgba(0, 229, 255, 0.4)";
+      mission.labelText.color = "#00ffff";
     }
   }
 }

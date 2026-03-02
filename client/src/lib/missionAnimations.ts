@@ -27,6 +27,7 @@ import {
   TransformNode,
 } from "@babylonjs/core";
 import type { RenderedMission, RenderedMissionPart } from "./missionRenderer";
+import RAPIER from "@dimforge/rapier3d-compat";
 
 // ─── Animation Lock ──────────────────────────────────────────────
 let _animPlaying = false;
@@ -168,12 +169,12 @@ async function animatePosition(
       node.position.copyFrom(targetPos);
       // Also update physics body if present
       if (part.rigidBody) {
-        const RAPIER = (window as any).__RAPIER;
-        if (RAPIER) {
-          part.rigidBody.setTranslation({ x: targetPos.x, y: targetPos.y, z: targetPos.z }, true);
-          part.rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-          part.rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-        }
+        part.rigidBody.setTranslation(
+          new RAPIER.Vector3(targetPos.x, targetPos.y, targetPos.z),
+          true
+        );
+        part.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0), true);
+        part.rigidBody.setAngvel(new RAPIER.Vector3(0, 0, 0), true);
       }
       resolve();
     });

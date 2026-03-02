@@ -226,7 +226,12 @@ export default function Home() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className="data-readout text-[9px] text-amber-score/60">{def.maxPoints}pt</span>
+                        <span className="data-readout text-[9px] text-amber-score/60">
+                          {matchMission && matchMission.earnedPoints > 0
+                            ? `${matchMission.earnedPoints}/${def.maxPoints}pt`
+                            : `${def.maxPoints}pt`
+                          }
+                        </span>
                         {isExpanded ? (
                           <ChevronDown className="w-2.5 h-2.5 text-muted-foreground/40" />
                         ) : (
