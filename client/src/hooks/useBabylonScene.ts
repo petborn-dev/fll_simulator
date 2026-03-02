@@ -36,6 +36,7 @@ import { getSeasonMissions, type MissionDefinition } from "@/lib/missions";
 import { renderMissions, syncMissionPhysics, disposeMissionLabelsGUI, resetMissionObjects, updateMissionLabelColors, type RenderedMission } from "@/lib/missionRenderer";
 import { ScoringEngine, type MatchState, MATCH_DURATION_SECONDS } from "@/lib/scoringEngine";
 import { playMissionAnimation, isAnimationPlaying } from "@/lib/missionAnimations";
+import { playScoreSound, playInteractSound, playMatchEndSound } from "@/lib/soundEffects";
 
 // FLL field dimensions in meters (real: 2362mm x 1143mm)
 const FIELD_WIDTH = 2.362;
@@ -116,6 +117,7 @@ export function useBabylonScene() {
   const keysRef = useRef<Set<string>>(new Set());
   const physicsStepRef = useRef(0);
   const disposedRef = useRef(false);
+  const cameraObjRef = useRef<ArcRotateCamera | null>(null);
 
   const missionsRef = useRef<RenderedMission[]>([]);
   const scoringEngineRef = useRef<ScoringEngine>(new ScoringEngine());
@@ -241,6 +243,7 @@ export function useBabylonScene() {
       camera.wheelDeltaPercentage = 0.02;
       camera.panningSensibility = 0;
       camera.attachControl(canvas!, true);
+      cameraObjRef.current = camera;
 
       // === LIGHTING ===
       const hemiLight = new HemisphericLight("hemiLight", new Vector3(0, 1, 0), scene);
@@ -374,7 +377,17 @@ export function useBabylonScene() {
         syncMissionPhysics(renderedMissions);
 
         // Tick scoring engine (checks conditions every frame)
+        const preTickState = scoringEngineRef.current.getState();
         scoringEngineRef.current.tick(renderedMissions, world);
+        const postTickState = scoringEngineRef.current.getState();
+        // Play score sound if new events were added (Cat A physics scoring)
+        if (postTickState.completedEvents.length > preTickState.completedEvents.length) {
+          playScoreSound();
+        }
+        // Detect match end transition and play fanfare
+        if (preTickState.phase === "running" && postTickState.phase === "ended") {
+          playMatchEndSound();
+        }
 
         // === E KEY ACTION HANDLER ===
         // Detect E key press (edge-triggered, not hold) with cooldown
@@ -390,6 +403,7 @@ export function useBabylonScene() {
               const stageToAnimate = nearest.stagesCompleted; // 0-indexed
               // Play animation first, then score
               lastEKeyAction = actionNow;
+              playInteractSound(); // click feedback on E press
               playMissionAnimation(
                 nearest.missionId,
                 stageToAnimate,
@@ -397,7 +411,8 @@ export function useBabylonScene() {
                 scene
               ).then(() => {
                 // Score after animation completes
-                scoringEngineRef.current.triggerMissionAction(nearest.missionId);
+                const evt = scoringEngineRef.current.triggerMissionAction(nearest.missionId);
+                if (evt) playScoreSound(); // ding on successful score
                 // Force immediate state update
                 lastStateUpdate = 0;
               });
@@ -504,7 +519,38 @@ export function useBabylonScene() {
     return cleanup;
   }, []);
 
-  return { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch };
+  /** Smoothly zoom the camera to focus on a specific mission by ID */
+  const focusMission = useCallback((missionId: string) => {
+    const camera = cameraObjRef.current;
+    const scene = sceneRef.current;
+    if (!camera || !scene) return;
+
+    const missionDefs = getSeasonMissions();
+    const def = missionDefs.find((m) => m.id === missionId);
+    if (!def) return;
+
+    // Animate camera target to mission position
+    const targetPos = new Vector3(def.position.x, 0.05, def.position.z);
+    const frames = 30;
+    const startTarget = camera.target.clone();
+    const startRadius = camera.radius;
+    const targetRadius = Math.min(startRadius, 0.8); // zoom in but not too close
+
+    let frame = 0;
+    const animFn = () => {
+      frame++;
+      const t = Math.min(frame / frames, 1);
+      const ease = t * (2 - t); // ease-out quad
+      camera.target = Vector3.Lerp(startTarget, targetPos, ease);
+      camera.radius = startRadius + (targetRadius - startRadius) * ease;
+      if (frame < frames) {
+        requestAnimationFrame(animFn);
+      }
+    };
+    animFn();
+  }, []);
+
+  return { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch, focusMission };
 }
 
 // ==========================================

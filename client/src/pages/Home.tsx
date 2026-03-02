@@ -14,10 +14,11 @@ import {
   CheckCircle2, Circle,
   PanelLeftClose, PanelLeftOpen,
   ChevronDown, ChevronRight, Gauge, Lightbulb, MapPin, Zap,
+  Hammer, KeyRound, Eye, Coins,
 } from "lucide-react";
 
 export default function Home() {
-  const { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch } = useBabylonScene();
+  const { canvasRef, sceneState, resetScene, startMatch, stopMatch, resetMatch, focusMission } = useBabylonScene();
   const [leftOpen, setLeftOpen] = useState(true);
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set(["M01"])); // First mission expanded by default
   const [selectedMission, setSelectedMission] = useState<string | null>(null);
@@ -202,14 +203,20 @@ export default function Home() {
                       onClick={() => {
                         toggleHint(def.id);
                         setSelectedMission(def.id);
+                        focusMission(def.id);
                       }}
-                      className="w-full flex items-center justify-between gap-1 px-2 py-1.5 text-left rounded transition-colors"
+                      className="w-full flex items-center justify-between gap-1 px-2 py-1.5 text-left rounded transition-colors group"
+                      title={`Click to zoom to ${def.name}`}
                     >
                       <div className="flex items-center gap-1.5 min-w-0">
                         {allComplete ? (
                           <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
+                        ) : def.id === "M16" ? (
+                          <Coins className="w-3 h-3 text-red-400/60 flex-shrink-0" />
+                        ) : def.interactionType === "trigger" ? (
+                          <KeyRound className="w-3 h-3 text-amber-score/50 flex-shrink-0 group-hover:text-amber-score/80 transition-colors" />
                         ) : (
-                          <MapPin className="w-3 h-3 text-cyan-glow/40 flex-shrink-0" />
+                          <Hammer className="w-3 h-3 text-cyan-glow/40 flex-shrink-0 group-hover:text-cyan-glow/70 transition-colors" />
                         )}
                         <span className={`data-readout text-[10px] font-bold flex-shrink-0 ${colorClass}`}>
                           {def.id}
@@ -230,7 +237,17 @@ export default function Home() {
 
                     {isExpanded && (
                       <div className="px-2.5 pb-2 animate-in slide-in-from-top-1 duration-150">
-                        {/* Mission description */}
+                        {/* Interaction type badge + description */}
+                        <div className="flex items-center gap-1.5 mb-1.5 ml-1">
+                          <span className={`text-[7px] px-1.5 py-0.5 rounded-full font-medium tracking-wider uppercase ${
+                            def.interactionType === "trigger"
+                              ? "bg-amber-score/15 text-amber-score/80 border border-amber-score/25"
+                              : "bg-cyan-glow/10 text-cyan-glow/70 border border-cyan-glow/20"
+                          }`}>
+                            {def.interactionType === "trigger" ? "E key" : "Push"}
+                          </span>
+                          <Eye className="w-2.5 h-2.5 text-muted-foreground/30 cursor-pointer hover:text-cyan-glow/60 transition-colors" />
+                        </div>
                         <p className="text-[8px] text-foreground/60 leading-relaxed mb-1.5 pl-1 border-l-2 border-cyan-glow/20 ml-1">
                           {def.description}
                         </p>
@@ -244,9 +261,11 @@ export default function Home() {
                                   ? "bg-green-400/10"
                                   : "bg-white/[0.02]"
                               }`}>
-                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${
-                                  c.completed ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.5)]" : "bg-amber-score/30"
-                                }`} />
+                                {c.completed ? (
+                                  <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
+                                ) : (
+                                  <Circle className="w-3 h-3 text-amber-score/30 flex-shrink-0 mt-0.5" />
+                                )}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between gap-1">
                                     <span className={`text-[8px] font-medium ${
